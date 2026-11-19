@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Vitalis.Core</RootNamespace>
+  </PropertyGroup>
+
+</Project>

@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 # Config Obsidian (le coffre est hors dépôt)
 .obsidian/
 !src/Vitalis.App/
+
+# ExÃ©cutable publiÃ© Ã  la racine (dotnet publish -p:Autonome=true), trop lourd pour Git.
+/Vitalis.exe

@@ -15,7 +15,10 @@ public static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+#if !VITALIS_AUTONOME
+        // Version autonome : le Windows App SDK est embarqué, il ne faut pas chercher le runtime installé.
         Bootstrap.Initialize(0x00010008);
+#endif
         try
         {
             ComWrappersSupport.InitializeComWrappers();
@@ -28,7 +31,9 @@ public static class Program
         }
         finally
         {
+#if !VITALIS_AUTONOME
             Bootstrap.Shutdown();
+#endif
         }
     }
 }

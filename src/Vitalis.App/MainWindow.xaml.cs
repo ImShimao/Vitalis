@@ -59,6 +59,7 @@ public sealed partial class MainWindow : Window
         }
 
         DimensionnerFenetre();
+        AppliquerIcone();
         AppliquerTheme(App.Theme);
 
         _pages = new MainViewModel().Pages;
@@ -69,6 +70,19 @@ public sealed partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr ExtractIcon(IntPtr hInst, string fichier, int index);
+
+    /// <summary>Icône de la fenêtre et de la barre des tâches : celle intégrée à Vitalis.exe.</summary>
+    private void AppliquerIcone()
+    {
+        var icone = Environment.ProcessPath is { } exe ? ExtractIcon(IntPtr.Zero, exe, 0) : IntPtr.Zero;
+        if (icone > 1)
+        {
+            AppWindow.SetIcon(Microsoft.UI.Win32Interop.GetIconIdFromIcon(icone));
+        }
+    }
 
     /// <summary>Taille de départ 1280×840 (à l'échelle de l'écran) et taille minimale lisible.</summary>
     private void DimensionnerFenetre()

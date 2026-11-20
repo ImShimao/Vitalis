@@ -16,7 +16,16 @@
         <!-- Barre de titre personnalisée (la fenêtre étend son contenu dessous). -->
         <Grid x:Name="BarreTitre" Grid.ColumnSpan="2" Padding="16,0,0,0">
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                <!-- Logo : mêmes couleurs que l'icône de Vitalis.exe. -->
+                <Border Width="20" Height="20" CornerRadius="5">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#10B99C" Offset="0" />
+                            <GradientStop Color="#1E5ED8" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <FontIcon Glyph="&#xE9D9;" FontSize="12" Foreground="White" />
+                </Border>
                 <TextBlock x:Name="TitreFenetre" Text="Vitalis" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
             </StackPanel>
         </Grid>

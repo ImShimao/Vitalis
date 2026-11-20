@@ -1,0 +1,36 @@
+<Page
+    x:Class="Vitalis.App.Views.DisquesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="32">
+        <StackPanel Spacing="16">
+            <TextBlock
+                Text="Disques"
+                Style="{StaticResource TitleLargeTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexte}" />
+            <TextBlock
+                x:Name="TexteStatut"
+                Text="Analyse en cours…"
+                Style="{StaticResource BodyTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexteSecondaire}"
+                TextWrapping="Wrap" />
+            <Button
+                x:Name="BoutonAdmin"
+                Content="Relancer en administrateur pour lire les compteurs SMART"
+                Visibility="Collapsed"
+                Click="BoutonAdmin_Click" />
+            <TextBlock
+                Text="Disques physiques"
+                Style="{StaticResource SubtitleTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexte}" />
+            <StackPanel x:Name="ListeDisques" Spacing="8" />
+            <TextBlock
+                Text="Espace libre par lecteur"
+                Style="{StaticResource SubtitleTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexte}" />
+            <StackPanel x:Name="ListeLecteurs" Spacing="8" />
+        </StackPanel>
+    </ScrollViewer>
+
+</Page>

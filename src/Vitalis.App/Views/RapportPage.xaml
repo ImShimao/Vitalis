@@ -1,0 +1,26 @@
+<Page
+    x:Class="Vitalis.App.Views.RapportPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Structure commune des pages : en-tête (titre, résumé, actions), puis le corps rempli par le code. -->
+    <ScrollViewer HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Style="{StaticResource VitalisContenuPage}">
+        <Grid ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="4">
+                <TextBlock x:Name="TitrePage" Text="Rapport" Style="{StaticResource VitalisTitrePage}" />
+                <TextBlock x:Name="TexteResume" Text="Exportez la dernière analyse en HTML ou en PDF, pour la garder ou l'envoyer à un proche." Style="{StaticResource VitalisDescription}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+            </StackPanel>
+        </Grid>
+
+        <StackPanel x:Name="Corps" Spacing="16" />
+        </StackPanel>
+    </ScrollViewer>
+
+</Page>

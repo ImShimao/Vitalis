@@ -3,18 +3,66 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Palette Vitalis. Chaque couple texte/fond est vérifié à 4,5:1 minimum (WCAG AA)
-         par le test ThemeContrasteTests. Si une couleur change, le test doit rester vert. -->
+         par le test ThemeContrasteTests. Si une couleur change, le test doit rester vert.
+         Les couleurs d'état (Succes, Attention, Critique) sont toujours accompagnées d'une icône et d'un mot. -->
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Light">
             <SolidColorBrush x:Key="VitalisFond" Color="#F3F3F3" />
             <SolidColorBrush x:Key="VitalisTexte" Color="#1A1A1A" />
             <SolidColorBrush x:Key="VitalisTexteSecondaire" Color="#5C5C5C" />
+            <SolidColorBrush x:Key="VitalisSucces" Color="#0F7B0F" />
+            <SolidColorBrush x:Key="VitalisAttention" Color="#9D5D00" />
+            <SolidColorBrush x:Key="VitalisCritique" Color="#C42B1C" />
+            <SolidColorBrush x:Key="VitalisSuccesFond" Color="#DFF6DD" />
+            <SolidColorBrush x:Key="VitalisAttentionFond" Color="#FFF4CE" />
+            <SolidColorBrush x:Key="VitalisCritiqueFond" Color="#FDE7E9" />
+            <SolidColorBrush x:Key="VitalisNeutreFond" Color="#EBEBEB" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="VitalisFond" Color="#202020" />
             <SolidColorBrush x:Key="VitalisTexte" Color="#FFFFFF" />
             <SolidColorBrush x:Key="VitalisTexteSecondaire" Color="#B3B3B3" />
+            <SolidColorBrush x:Key="VitalisSucces" Color="#6CCB5F" />
+            <SolidColorBrush x:Key="VitalisAttention" Color="#FCE100" />
+            <SolidColorBrush x:Key="VitalisCritique" Color="#FF99A4" />
+            <SolidColorBrush x:Key="VitalisSuccesFond" Color="#1F3A1D" />
+            <SolidColorBrush x:Key="VitalisAttentionFond" Color="#433519" />
+            <SolidColorBrush x:Key="VitalisCritiqueFond" Color="#442726" />
+            <SolidColorBrush x:Key="VitalisNeutreFond" Color="#333333" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
+
+    <!-- Titre de page. -->
+    <Style x:Key="VitalisTitrePage" TargetType="TextBlock" BasedOn="{StaticResource TitleTextBlockStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource VitalisTexte}" />
+    </Style>
+
+    <!-- Phrase sous le titre de page. -->
+    <Style x:Key="VitalisDescription" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource VitalisTexteSecondaire}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <!-- Titre de section dans une page. -->
+    <Style x:Key="VitalisTitreSection" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource VitalisTexte}" />
+        <Setter Property="Margin" Value="0,8,0,0" />
+    </Style>
+
+    <!-- Carte : fond et bordure des cartes Windows 11. -->
+    <Style x:Key="VitalisCarte" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="20" />
+    </Style>
+
+    <!-- Contenu d'une page : marges et largeur maximale identiques partout. -->
+    <Style x:Key="VitalisContenuPage" TargetType="StackPanel">
+        <Setter Property="Padding" Value="40,28,40,40" />
+        <Setter Property="Spacing" Value="16" />
+        <Setter Property="MaxWidth" Value="1120" />
+    </Style>
 
 </ResourceDictionary>

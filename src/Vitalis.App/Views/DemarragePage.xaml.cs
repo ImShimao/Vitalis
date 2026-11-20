@@ -1,6 +1,5 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Vitalis.Core.Demarrage;
 
 namespace Vitalis.App.Views;
@@ -14,40 +13,69 @@ public sealed partial class DemarragePage : Page
     public DemarragePage()
     {
         InitializeComponent();
-        Loaded += (_, _) => Afficher();
+        Loaded += async (_, _) => await AfficherAsync();
     }
 
     private DemarrageService Service() => new(new RegistreDemarrageWindows(), _fichierSauvegarde);
 
-    private void Afficher()
+    private async void BoutonActualiser_Click(object sender, RoutedEventArgs e) => await AfficherAsync();
+
+    private async Task AfficherAsync(string? confirmation = null)
     {
-        ListeEntrees.Children.Clear();
-        ListeDesactivees.Children.Clear();
+        BoutonActualiser.IsEnabled = false;
+        if (Corps.Children.Count == 0)
+        {
+            Corps.Children.Add(Ui.Chargement("Lecture des programmes de démarrage…"));
+        }
 
         try
         {
-            var service = Service();
-            var actifs = service.Lister();
-            var desactives = service.Desactivees();
-            TexteResume.Text = $"{actifs.Count} programme(s) au démarrage · {desactives.Count} désactivé(s) par Vitalis.";
-
-            foreach (var e in actifs)
+            var (actifs, desactives) = await Task.Run(() =>
             {
-                ListeEntrees.Children.Add(Ligne(e, "Désactiver…", async () => await ConfirmerDesactivationAsync(e)));
+                var s = Service();
+                return (s.Lister(), s.Desactivees());
+            });
+
+            Corps.Children.Clear();
+            if (confirmation is not null)
+            {
+                Corps.Children.Add(Ui.Message(InfoBarSeverity.Success, confirmation));
             }
 
-            foreach (var e in desactives)
+            var resume = new GrilleAdaptative { LargeurMinimale = 220 };
+            resume.Children.Add(Ui.Carte(Ui.Statistique(actifs.Count.ToString(), "Programmes au démarrage", "\uE7E8")));
+            resume.Children.Add(Ui.Carte(Ui.Statistique(desactives.Count.ToString(), "Désactivés par Vitalis", "\uE8D8")));
+            Corps.Children.Add(resume);
+
+            Corps.Children.Add(Ui.TitreSection("Programmes au démarrage"));
+            Corps.Children.Add(actifs.Count == 0
+                ? Ui.Vide("\uE7E8", "Aucun programme au démarrage", "Rien n'est lancé automatiquement depuis les clés Run lues par Vitalis.")
+                : Ui.ListeCarte(actifs.OrderBy(e => e.Nom, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(e => e.Emplacement.StartsWith("HKCU", StringComparison.Ordinal)
+                        ? Ligne(e, "Désactiver…", "\uE71A", () => ConfirmerDesactivationAsync(e))
+                        // HKLM : modification réservée à l'administrateur, non proposée (le registre la refuserait).
+                        : Ui.Ligne(e.Nom, $"{e.Emplacement}  ·  {e.Commande}", Ui.Badge(Niveau.Neutre, "Tous les utilisateurs")))));
+
+            if (desactives.Count > 0)
             {
-                ListeDesactivees.Children.Add(Ligne(e, "Réactiver", () =>
+                Corps.Children.Add(Ui.TitreSection("Désactivés par Vitalis"));
+                Corps.Children.Add(Ui.ListeCarte(desactives.Select(e => Ligne(e, "Réactiver", "\uE768", async () =>
                 {
-                    Service().Restaurer(e);
-                    Afficher();
-                }));
+                    await Task.Run(() => Service().Restaurer(e));
+                    await AfficherAsync($"« {e.Nom} » démarrera de nouveau avec Windows.");
+                }))));
             }
+
+            Corps.Children.Add(Ui.Legende("Seuls les programmes de votre session (clé Run de l'utilisateur) peuvent être désactivés ici. Les autres sont affichés pour information."));
         }
         catch (Exception ex)
         {
-            TexteResume.Text = $"Lecture impossible : {ex.Message}";
+            Corps.Children.Clear();
+            Corps.Children.Add(Ui.Message(InfoBarSeverity.Error, "Lecture impossible", ex.Message));
+        }
+        finally
+        {
+            BoutonActualiser.IsEnabled = true;
         }
     }
 
@@ -63,58 +91,35 @@ public sealed partial class DemarragePage : Page
             XamlRoot = XamlRoot,
         };
 
-        if (await dialogue.ShowAsync() == ContentDialogResult.Primary)
+        if (await dialogue.ShowAsync() != ContentDialogResult.Primary)
         {
-            Service().Desactiver(e, confirme: true);
-            Afficher();
+            return;
+        }
+
+        try
+        {
+            await Task.Run(() => Service().Desactiver(e, confirme: true));
+            await AfficherAsync($"« {e.Nom} » est désactivé. « Réactiver » le rétablit à l'identique.");
+        }
+        catch (Exception ex)
+        {
+            Corps.Children.Insert(0, Ui.Message(InfoBarSeverity.Error, "Désactivation impossible", ex.Message));
         }
     }
 
-    private static Border Ligne(EntreeDemarrage e, string libelleBouton, Action action)
+    private static UIElement Ligne(EntreeDemarrage e, string libelle, string glyphe, Func<Task> action)
     {
-        var bouton = new Button { Content = libelleBouton };
-        bouton.Click += (_, _) => action();
-        return Ligne(e, bouton);
-    }
-
-    private static Border Ligne(EntreeDemarrage e, string libelleBouton, Func<Task> action)
-    {
-        var bouton = new Button { Content = libelleBouton };
-        bouton.Click += async (_, _) => await action();
-        return Ligne(e, bouton);
-    }
-
-    private static Border Ligne(EntreeDemarrage e, Button bouton)
-    {
-        var grille = new Grid();
-        grille.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grille.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var texte = new StackPanel { Spacing = 2 };
-        texte.Children.Add(new TextBlock
+        var bouton = Ui.Bouton(libelle, glyphe);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(bouton, $"{libelle} {e.Nom}");
+        bouton.Click += async (_, _) =>
         {
-            Text = e.Nom,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Foreground = (Brush)Application.Current.Resources["VitalisTexte"],
-        });
-        texte.Children.Add(new TextBlock
-        {
-            Text = $"{e.Emplacement} · {e.Commande}",
-            TextWrapping = TextWrapping.Wrap,
-            Foreground = (Brush)Application.Current.Resources["VitalisTexteSecondaire"],
-        });
-
-        Grid.SetColumn(bouton, 1);
-        grille.Children.Add(texte);
-        grille.Children.Add(bouton);
-
-        return new Border
-        {
-            Padding = new Thickness(12),
-            CornerRadius = new CornerRadius(6),
-            BorderBrush = (Brush)Application.Current.Resources["VitalisTexteSecondaire"],
-            BorderThickness = new Thickness(1),
-            Child = grille,
+            bouton.IsEnabled = false;
+            await action();
+            bouton.IsEnabled = true;
         };
+
+        var ligne = Ui.Ligne(e.Nom, $"{e.Emplacement}  ·  {e.Commande}", bouton);
+        ToolTipService.SetToolTip(ligne, e.Commande);
+        return ligne;
     }
 }

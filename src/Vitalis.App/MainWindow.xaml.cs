@@ -1,11 +1,12 @@
-using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Microsoft.UI.Composition.SystemBackdrops;
-using Microsoft.UI.Text;
+using Microsoft.UI.Input;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Input;
+using Microsoft.UI.Xaml.Media.Animation;
 using Vitalis.App.ViewModels;
 using Vitalis.App.Views;
 using Vitalis.Core;
@@ -17,16 +18,34 @@ namespace Vitalis.App;
 
 public sealed partial class MainWindow : Window
 {
-    private readonly Dictionary<string, Button> _boutons = new();
+    /// <summary>Icônes du menu (police Segoe Fluent Icons sur Windows 11, Segoe MDL2 Assets sur Windows 10).</summary>
+    private static readonly Dictionary<string, string> Icones = new()
+    {
+        ["tableau-de-bord"] = "\uE80F",
+        ["materiel"] = "\uE950",
+        ["disques"] = "\uEDA2",
+        ["mises-a-jour"] = "\uE895",
+        ["pilotes"] = "\uE772",
+        ["demarrage"] = "\uE7E8",
+        ["performances"] = "\uEC4A",
+        ["sante-live"] = "\uE95E",
+        ["rapport"] = "\uE9F9",
+        ["parametres"] = "\uE713",
+    };
+
+    private readonly Dictionary<string, ListViewItem> _items = new();
     private IReadOnlyList<PageDefinition> _pages = [];
+    private bool _synchronisation;
+    private string? _pageActive;
 
     public MainWindow()
     {
         InitializeComponent();
         Title = AppInfo.Nom;
+        TitreFenetre.Text = $"{AppInfo.Nom}  ·  diagnostic du PC";
 
-        // La barre de titre suit le mode du système, comme le contenu (sinon elle reste claire en mode sombre).
-        AppWindow.TitleBar.PreferredTheme = Microsoft.UI.Windowing.TitleBarTheme.UseDefaultAppMode;
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(BarreTitre);
 
         // Mica seulement sur Windows 11 ; sur Windows 10 la fenêtre garde le fond du thème.
         if (MicaController.IsSupported())
@@ -39,15 +58,41 @@ public sealed partial class MainWindow : Window
             Racine.Background = (Brush)Application.Current.Resources["VitalisFond"];
         }
 
+        DimensionnerFenetre();
         AppliquerTheme(App.Theme);
 
         _pages = new MainViewModel().Pages;
         ConstruireMenu(_pages);
         Racine.KeyDown += Racine_KeyDown;
-        Naviguer(_pages[0]);
+        Naviguer(_pages[0].Cle);
     }
 
-    /// <summary>Thème du contenu : « Clair », « Sombre », ou « Systeme » (suit Windows).</summary>
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    /// <summary>Taille de départ 1280×840 (à l'échelle de l'écran) et taille minimale lisible.</summary>
+    private void DimensionnerFenetre()
+    {
+        var echelle = GetDpiForWindow(WinRT.Interop.WindowNative.GetWindowHandle(this)) / 96.0;
+        if (echelle <= 0)
+        {
+            echelle = 1;
+        }
+
+        var zone = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        var largeur = Math.Min((int)(1280 * echelle), zone.Width);
+        var hauteur = Math.Min((int)(840 * echelle), zone.Height);
+        AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(
+            zone.X + (zone.Width - largeur) / 2, zone.Y + (zone.Height - hauteur) / 2, largeur, hauteur));
+
+        if (AppWindow.Presenter is OverlappedPresenter p)
+        {
+            p.PreferredMinimumWidth = (int)(900 * echelle);
+            p.PreferredMinimumHeight = (int)(600 * echelle);
+        }
+    }
+
+    /// <summary>Thème du contenu : « Clair », « Sombre », ou « Systeme » (suit Windows). La barre de titre suit aussi.</summary>
     public void AppliquerTheme(string theme)
     {
         Racine.RequestedTheme = theme switch
@@ -56,6 +101,13 @@ public sealed partial class MainWindow : Window
             "Sombre" => ElementTheme.Dark,
             _ => ElementTheme.Default,
         };
+
+        AppWindow.TitleBar.PreferredTheme = theme switch
+        {
+            "Clair" => TitleBarTheme.Light,
+            "Sombre" => TitleBarTheme.Dark,
+            _ => TitleBarTheme.UseDefaultAppMode,
+        };
     }
 
     private void ConstruireMenu(IReadOnlyList<PageDefinition> pages)
@@ -63,18 +115,29 @@ public sealed partial class MainWindow : Window
         for (var i = 0; i < pages.Count; i++)
         {
             var page = pages[i];
-            var bouton = new Button
-            {
-                Content = page.Titre,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Left,
-            };
+            var contenu = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14, Padding = new Thickness(4, 6, 4, 6) };
+            contenu.Children.Add(new FontIcon { Glyph = Icones.GetValueOrDefault(page.Cle, "\uE8A5"), FontSize = 16 });
+            contenu.Children.Add(new TextBlock { Text = page.Titre, VerticalAlignment = VerticalAlignment.Center });
 
-            bouton.Click += (_, _) => Naviguer(page);
+            var raccourci = i < 9 ? $"Ctrl+{i + 1}" : "Ctrl+0";
+            var item = new ListViewItem { Content = contenu, Tag = page.Cle };
+            ToolTipService.SetToolTip(item, $"{page.Titre} ({raccourci})");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, page.Titre);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAcceleratorKey(item, raccourci);
 
-            _boutons[page.Cle] = bouton;
-            MenuPanneau.Children.Add(bouton);
+            _items[page.Cle] = item;
+            (page.Cle == "parametres" ? MenuBas : Menu).Items.Add(item);
         }
+    }
+
+    private void Menu_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_synchronisation || sender is not ListView liste || liste.SelectedItem is not ListViewItem { Tag: string cle })
+        {
+            return;
+        }
+
+        Naviguer(cle);
     }
 
     // Ctrl+1 à Ctrl+9 : pages 1 à 9 ; Ctrl+0 : page 10.
@@ -99,29 +162,49 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        Naviguer(_pages[index]);
+        Naviguer(_pages[index].Cle);
         e.Handled = true;
     }
 
-    private void Naviguer(PageDefinition page)
+    /// <summary>Ouvre une page par sa clé (utilisé aussi par les cartes du tableau de bord).</summary>
+    public void Naviguer(string cle)
     {
+        var page = _pages.FirstOrDefault(p => p.Cle == cle);
+        if (page is null || cle == _pageActive)
+        {
+            return;
+        }
+
         var type = page.Cle switch
         {
-            "disques" => typeof(Views.DisquesPage),
-            "mises-a-jour" => typeof(Views.MisesAJourPage),
-            "tableau-de-bord" => typeof(Views.TableauDeBordPage),
-            "pilotes" => typeof(Views.PilotesPage),
-            "demarrage" => typeof(Views.DemarragePage),
-            "performances" => typeof(Views.PerformancesPage),
-            "parametres" => typeof(Views.ParametresPage),
+            "tableau-de-bord" => typeof(TableauDeBordPage),
+            "materiel" => typeof(MaterielPage),
+            "disques" => typeof(DisquesPage),
+            "mises-a-jour" => typeof(MisesAJourPage),
+            "pilotes" => typeof(PilotesPage),
+            "demarrage" => typeof(DemarragePage),
+            "performances" => typeof(PerformancesPage),
+            "rapport" => typeof(RapportPage),
+            "parametres" => typeof(ParametresPage),
             _ => typeof(PagePlaceholder),
         };
-        ContenuFrame.Navigate(type, page);
 
-        // Page active en gras, pour que l'état soit visible sans couleur seule.
-        foreach (var (cle, bouton) in _boutons)
+        try
         {
-            bouton.FontWeight = cle == page.Cle ? FontWeights.Bold : FontWeights.Normal;
+            ContenuFrame.Navigate(type, page, new EntranceNavigationTransitionInfo());
+            _pageActive = cle;
         }
+        catch (Exception ex)
+        {
+            // Une page en erreur ne doit pas bloquer le menu : l'erreur est journalisée, la page actuelle reste affichée.
+            Vitalis.Core.Journal.JournalVitalis.Erreur($"Ouverture de la page {cle} impossible", ex);
+            cle = _pageActive ?? _pages[0].Cle;
+        }
+
+        // Sélection du menu synchronisée (les deux listes : une seule page active).
+        _synchronisation = true;
+        Menu.SelectedItem = cle == "parametres" ? null : _items[cle];
+        MenuBas.SelectedItem = cle == "parametres" ? _items[cle] : null;
+        _synchronisation = false;
     }
 }

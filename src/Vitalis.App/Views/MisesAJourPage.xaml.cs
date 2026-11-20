@@ -1,96 +1,102 @@
 using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Vitalis.Core.Materiel;
 using Vitalis.Core.MisesAJour;
 
 namespace Vitalis.App.Views;
 
-/// <summary>Page « Mises à jour » : mises à jour Windows en attente et dernière installation. Lecture seule.</summary>
+/// <summary>Page « Mises à jour » : mises à jour Windows et logiciels (winget) en attente. Lecture seule.</summary>
 public sealed partial class MisesAJourPage : Page
 {
-    private CancellationTokenSource? _annulation;
-
     public MisesAJourPage()
     {
         InitializeComponent();
-        Loaded += async (_, _) => await ChargerAsync();
-        Unloaded += (_, _) => _annulation?.Cancel();
+        Loaded += async (_, _) => await ChargerAsync(forcer: false);
     }
 
-    private async Task ChargerAsync()
+    private async void BoutonActualiser_Click(object sender, RoutedEventArgs e) => await ChargerAsync(forcer: true);
+
+    private Task ChargerAsync(bool forcer) => Ui.ChargerAsync(
+        EtatAnalyse.MisesAJour, forcer, Corps, BoutonActualiser,
+        "Recherche auprès de Windows Update et de winget… (environ 30 secondes, vous pouvez changer de page entre-temps)",
+        ct => new AnalyseMisesAJour(new WuaCom(), new WingetCli()).AnalyserAsync(ct),
+        Afficher);
+
+    private void Afficher(RapportMisesAJour r)
     {
-        _annulation?.Cancel();
-        _annulation = new CancellationTokenSource();
+        var windows = r.EnAttente.Elements.Count;
+        var logiciels = r.Logiciels.Elements.Count;
+        var date = r.DerniereInstallationReussie is { } d ? d.ToString("d MMMM yyyy", CultureInfo.CurrentCulture) : "inconnue";
 
-        TexteResume.Text = "Recherche en cours (cela peut prendre une trentaine de secondes)…";
-        ListeMises.Children.Clear();
+        var resume = new GrilleAdaptative { LargeurMinimale = 220 };
+        resume.Children.Add(Ui.Carte(Ui.Statistique(
+            r.EnAttente.Etat == Disponibilite.Indisponible ? "?" : windows.ToString(CultureInfo.CurrentCulture),
+            "Mises à jour Windows en attente", "\uE895")));
+        resume.Children.Add(Ui.Carte(Ui.Statistique(
+            r.Logiciels.Etat == Disponibilite.Indisponible ? "?" : logiciels.ToString(CultureInfo.CurrentCulture),
+            "Logiciels à mettre à jour (winget)", "\uE7B8")));
+        resume.Children.Add(Ui.Carte(Ui.Statistique(date, "Dernière installation Windows réussie", "\uE823")));
+        Corps.Children.Add(resume);
 
-        try
+        if (r.RaisonHistorique is not null)
         {
-            var rapport = await new AnalyseMisesAJour(new WuaCom(), new WingetCli()).AnalyserAsync(_annulation.Token);
-            Afficher(rapport);
+            Corps.Children.Add(Ui.Message(InfoBarSeverity.Informational, "Historique Windows Update", r.RaisonHistorique));
         }
-        catch (OperationCanceledException)
+
+        // Windows Update
+        Corps.Children.Add(Ui.TitreSection("Windows Update"));
+        if (r.EnAttente.Etat == Disponibilite.Indisponible)
         {
-            // Page quittée pendant la recherche.
+            Corps.Children.Add(Ui.Message(InfoBarSeverity.Warning, "Recherche Windows Update indisponible", r.EnAttente.Raison));
         }
-        catch (Exception e)
+        else if (windows == 0)
         {
-            TexteResume.Text = $"Analyse impossible : {e.Message}";
-        }
-    }
-
-    private void Afficher(RapportMisesAJour rapport)
-    {
-        var nombre = rapport.EnAttente.Elements.Count;
-        var date = rapport.DerniereInstallationReussie is { } d
-            ? d.ToString("d MMMM yyyy", CultureInfo.CurrentCulture)
-            : "inconnue";
-
-        TexteResume.Text = $"{nombre} mise(s) à jour Windows en attente · {rapport.Logiciels.Elements.Count} logiciel(s) à mettre à jour · " +
-            $"dernière installation Windows réussie : {date}."
-            + (rapport.RaisonHistorique is null ? string.Empty : $" {rapport.RaisonHistorique}");
-
-        ListeLogiciels.Children.Clear();
-        if (rapport.Logiciels.Etat == Disponibilite.Indisponible)
-        {
-            ListeLogiciels.Children.Add(Texte(rapport.Logiciels.Raison ?? "winget indisponible.", secondaire: true));
+            Corps.Children.Add(Ui.Vide("\uE73E", "Windows est à jour", "Aucune mise à jour en attente."));
         }
         else
         {
-            if (rapport.Logiciels.Elements.Count == 0)
+            Corps.Children.Add(Ui.ListeCarte(r.EnAttente.Elements.Select(m =>
             {
-                ListeLogiciels.Children.Add(Texte(rapport.Logiciels.Raison ?? "Aucune mise à jour de logiciel.", secondaire: true));
-            }
+                var details = new List<string>();
+                if (m.Kb.Count > 0)
+                {
+                    details.Add(string.Join(", ", m.Kb.Select(k => k.StartsWith("KB", StringComparison.OrdinalIgnoreCase) ? k : "KB" + k)));
+                }
 
-            foreach (var l in rapport.Logiciels.Elements)
-            {
-                ListeLogiciels.Children.Add(Texte($"{l.Nom} · {l.Id} · {l.VersionActuelle} → {l.VersionDisponible}", secondaire: false));
-            }
+                if (m.Gravite is not null)
+                {
+                    details.Add($"gravité : {m.Gravite}");
+                }
+
+                if (m.Obligatoire)
+                {
+                    details.Add("obligatoire");
+                }
+
+                return (UIElement)Ui.Ligne(m.Titre, string.Join("  ·  ", details),
+                    Ui.Badge(Niveau.Neutre, m.Pilote ? "Pilote" : "Logiciel"),
+                    Ui.Icone(m.Pilote ? "\uE772" : "\uE895", 18));
+            })));
+            Corps.Children.Add(Ui.Legende("Pour installer : Paramètres Windows › Windows Update. Vitalis n'installe rien."));
         }
 
-        if (rapport.EnAttente.Etat == Disponibilite.Indisponible)
+        // winget
+        Corps.Children.Add(Ui.TitreSection("Logiciels (winget)"));
+        if (r.Logiciels.Etat == Disponibilite.Indisponible)
         {
-            ListeMises.Children.Add(Texte(rapport.EnAttente.Raison ?? "Recherche indisponible.", secondaire: true));
-            return;
+            Corps.Children.Add(Ui.Message(InfoBarSeverity.Warning, "winget indisponible", r.Logiciels.Raison));
         }
-
-        foreach (var m in rapport.EnAttente.Elements)
+        else if (logiciels == 0)
         {
-            var kb = m.Kb.Count == 0 ? string.Empty : $" ({string.Join(", ", m.Kb)})";
-            var gravite = m.Gravite is null ? string.Empty : $" · gravité : {m.Gravite}";
-            var type = m.Pilote ? "Pilote" : "Logiciel";
-            var obligatoire = m.Obligatoire ? " · obligatoire" : string.Empty;
-            ListeMises.Children.Add(Texte($"{type} · {m.Titre}{kb}{gravite}{obligatoire}", secondaire: false));
+            Corps.Children.Add(Ui.Vide("\uE73E", "Logiciels à jour", r.Logiciels.Raison ?? "winget ne signale aucune mise à jour."));
+        }
+        else
+        {
+            Corps.Children.Add(Ui.ListeCarte(r.Logiciels.Elements
+                .OrderBy(l => l.Nom, StringComparer.CurrentCultureIgnoreCase)
+                .Select(l => (UIElement)Ui.Ligne(l.Nom, l.Id, Ui.Texte($"{l.VersionActuelle}  →  {l.VersionDisponible}", secondaire: true)))));
+            Corps.Children.Add(Ui.Legende("Pour mettre à jour un logiciel : winget upgrade --id <identifiant>, ou depuis le logiciel lui-même."));
         }
     }
-
-    private static TextBlock Texte(string texte, bool secondaire) => new()
-    {
-        Text = texte,
-        TextWrapping = TextWrapping.Wrap,
-        Foreground = (Brush)Application.Current.Resources[secondaire ? "VitalisTexteSecondaire" : "VitalisTexte"],
-    };
 }

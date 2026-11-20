@@ -17,6 +17,18 @@ public class ThemeContrasteTests
         yield return ["Light", "VitalisTexteSecondaire", "VitalisFond"];
         yield return ["Dark", "VitalisTexte", "VitalisFond"];
         yield return ["Dark", "VitalisTexteSecondaire", "VitalisFond"];
+
+        // Couleurs d'état : sur le fond de page et sur leur fond de badge.
+        foreach (var theme in new[] { "Light", "Dark" })
+        {
+            foreach (var etat in new[] { "Succes", "Attention", "Critique" })
+            {
+                yield return [theme, "Vitalis" + etat, "VitalisFond"];
+                yield return [theme, "Vitalis" + etat, "Vitalis" + etat + "Fond"];
+            }
+
+            yield return [theme, "VitalisTexte", "VitalisNeutreFond"];
+        }
     }
 
     [Theory]

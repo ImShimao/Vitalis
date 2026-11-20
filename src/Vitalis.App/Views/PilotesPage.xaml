@@ -3,24 +3,48 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <ScrollViewer Padding="32">
-        <StackPanel Spacing="16">
-            <TextBlock
-                Text="Pilotes"
-                Style="{StaticResource TitleLargeTextBlockStyle}"
-                Foreground="{ThemeResource VitalisTexte}" />
-            <TextBlock
-                x:Name="TexteResume"
-                Text="Lecture des pilotes…"
-                Style="{StaticResource BodyTextBlockStyle}"
-                Foreground="{ThemeResource VitalisTexteSecondaire}"
-                TextWrapping="Wrap" />
-            <TextBlock
-                Text="Règle : un pilote daté de plus de deux ans est signalé « ancien ». Vitalis ne télécharge ni n'installe aucun pilote : les liens mènent aux pages officielles du fabricant."
-                Style="{StaticResource BodyTextBlockStyle}"
-                Foreground="{ThemeResource VitalisTexteSecondaire}"
-                TextWrapping="Wrap" />
-            <StackPanel x:Name="ListePilotes" Spacing="10" />
+    <!-- Structure commune des pages : en-tête (titre, résumé, actions), puis le corps rempli par le code. -->
+    <ScrollViewer HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Style="{StaticResource VitalisContenuPage}">
+        <Grid ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="4">
+                <TextBlock x:Name="TitrePage" Text="Pilotes" Style="{StaticResource VitalisTitrePage}" />
+                <TextBlock x:Name="TexteResume" Text="Un pilote daté de plus de deux ans est signalé « ancien ». Vitalis ne télécharge ni n'installe aucun pilote." Style="{StaticResource VitalisDescription}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                <Button x:Name="BoutonActualiser" Click="BoutonActualiser_Click" AutomationProperties.Name="Actualiser">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        <TextBlock x:Name="BoutonActualiserTexte" Text="Actualiser" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid x:Name="Filtres" ColumnSpacing="16" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MaxWidth="420" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBox
+                x:Name="Recherche"
+                PlaceholderText="Rechercher un appareil ou un fabricant"
+                AutomationProperties.Name="Rechercher un pilote"
+                TextChanged="Recherche_TextChanged" />
+            <ToggleSwitch
+                x:Name="AnciensSeulement"
+                Grid.Column="1"
+                OnContent="Anciens seulement"
+                OffContent="Tous les pilotes"
+                AutomationProperties.Name="Afficher seulement les pilotes anciens"
+                Toggled="AnciensSeulement_Toggled" />
+        </Grid>
+        <StackPanel x:Name="Corps" Spacing="16" />
         </StackPanel>
     </ScrollViewer>
 

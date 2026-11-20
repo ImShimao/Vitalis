@@ -3,43 +3,35 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <ScrollViewer Padding="32">
-        <StackPanel Spacing="16">
-            <TextBlock
-                Text="Tableau de bord"
-                Style="{StaticResource TitleLargeTextBlockStyle}"
-                Foreground="{ThemeResource VitalisTexte}" />
-
-            <StackPanel Orientation="Horizontal" Spacing="16">
-                <TextBlock
-                    x:Name="TexteScore"
-                    Text="Score global : —"
-                    Style="{StaticResource SubtitleTextBlockStyle}"
-                    Foreground="{ThemeResource VitalisTexte}"
-                    VerticalAlignment="Center" />
-                <Button x:Name="BoutonAnalyser" Content="Analyser maintenant" Click="BoutonAnalyser_Click" />
-                <Button x:Name="BoutonAnnuler" Content="Annuler" Click="BoutonAnnuler_Click" Visibility="Collapsed" />
-                <Button x:Name="BoutonExporterHtml" Content="Exporter en HTML" Click="BoutonExporterHtml_Click" IsEnabled="False" />
-                <Button x:Name="BoutonExporterPdf" Content="Exporter en PDF" Click="BoutonExporterPdf_Click" IsEnabled="False" />
+    <!-- Structure commune des pages : en-tête (titre, résumé, actions), puis le corps rempli par le code. -->
+    <ScrollViewer HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Style="{StaticResource VitalisContenuPage}">
+        <Grid ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="4">
+                <TextBlock x:Name="TitrePage" Text="Tableau de bord" Style="{StaticResource VitalisTitrePage}" />
+                <TextBlock x:Name="TexteResume" Text="Vue d'ensemble de l'état de votre PC." Style="{StaticResource VitalisDescription}" />
             </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                <Button x:Name="BoutonAnalyser" Style="{StaticResource AccentButtonStyle}" Click="BoutonAnalyser_Click" AutomationProperties.Name="Analyser maintenant">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE721;" FontSize="14" />
+                        <TextBlock x:Name="BoutonAnalyserTexte" Text="Analyser maintenant" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="BoutonAnnuler" Visibility="Collapsed" Click="BoutonAnnuler_Click" AutomationProperties.Name="Annuler">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE711;" FontSize="14" />
+                        <TextBlock x:Name="BoutonAnnulerTexte" Text="Annuler" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
 
-            <ProgressBar x:Name="Progression" Minimum="0" Maximum="100" Value="0" Visibility="Collapsed" />
-
-            <TextBlock
-                x:Name="TexteDerniereAnalyse"
-                Text="Aucune analyse pour l'instant."
-                Style="{StaticResource BodyTextBlockStyle}"
-                Foreground="{ThemeResource VitalisTexteSecondaire}"
-                TextWrapping="Wrap" />
-
-            <TextBlock
-                x:Name="TexteStatut"
-                Style="{StaticResource BodyTextBlockStyle}"
-                Foreground="{ThemeResource VitalisTexteSecondaire}"
-                TextWrapping="Wrap" />
-
-            <!-- UniformGrid n'existe pas dans WinUI 3 : les cartes sont empilées. -->
-            <StackPanel x:Name="Cartes" Spacing="12" />
+        <StackPanel x:Name="Corps" Spacing="16" />
         </StackPanel>
     </ScrollViewer>
 

@@ -1,6 +1,6 @@
+using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Vitalis.Core.Performances;
 
 namespace Vitalis.App.Views;
@@ -11,6 +11,15 @@ public sealed partial class PerformancesPage : Page
     private static readonly string Dossier = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Vitalis");
     private static readonly string FichierHistorique = Path.Combine(Dossier, "performances.json");
 
+    private static string Glyphe(string composant) => composant switch
+    {
+        _ when composant.StartsWith("Processeur", StringComparison.Ordinal) => "\uE950",
+        _ when composant.StartsWith("Mémoire", StringComparison.Ordinal) => "\uE964",
+        _ when composant.StartsWith("Disque", StringComparison.Ordinal) => "\uEDA2",
+        _ when composant.StartsWith("Carte graphique", StringComparison.Ordinal) => "\uE7F4",
+        _ => "\uEC4A",
+    };
+
     private CancellationTokenSource? _annulation;
 
     public PerformancesPage()
@@ -20,6 +29,8 @@ public sealed partial class PerformancesPage : Page
         Unloaded += (_, _) => _annulation?.Cancel();
     }
 
+    private void BoutonAnnuler_Click(object sender, RoutedEventArgs e) => _annulation?.Cancel();
+
     private async void BoutonLancer_Click(object sender, RoutedEventArgs e)
     {
         _annulation?.Cancel();
@@ -27,87 +38,131 @@ public sealed partial class PerformancesPage : Page
         var jeton = _annulation.Token;
 
         BoutonLancer.IsEnabled = false;
-        Attente.IsActive = true;
-        TexteStatut.Text = "Mesures en cours : ne pas utiliser intensivement la machine pendant ce temps.";
+        BoutonAnnuler.Visibility = Visibility.Visible;
+
+        var etapes = new (string Nom, Func<ResultatBenchmark> Mesure)[]
+        {
+            ("Processeur", () => Benchmarks.Cpu(jeton)),
+            ("Mémoire", () => Benchmarks.Ram(jeton)),
+            ("Disque", () => Benchmarks.Disque(Path.GetTempPath(), jeton)),
+        };
+
+        var barre = new ProgressBar { Minimum = 0, Maximum = etapes.Length, Value = 0 };
+        var texte = Ui.Texte(string.Empty, secondaire: true);
+        Corps.Children.Clear();
+        var attente = new StackPanel { Spacing = 10 };
+        attente.Children.Add(Ui.EnTeteCarte("\uEC4A", "Mesures en cours"));
+        attente.Children.Add(barre);
+        attente.Children.Add(texte);
+        attente.Children.Add(Ui.Legende("Évitez d'utiliser le PC intensivement pendant ce temps : le résultat serait faussé."));
+        Corps.Children.Add(Ui.Carte(attente));
 
         try
         {
-            var resultats = await Task.Run(() => new List<ResultatBenchmark>
+            var resultats = new List<ResultatBenchmark>();
+            for (var i = 0; i < etapes.Length; i++)
             {
-                Benchmarks.Cpu(jeton),
-                Benchmarks.Ram(jeton),
-                Benchmarks.Disque(Path.GetTempPath(), jeton),
-                Benchmarks.GpuIndisponible(),
-            }, jeton);
+                texte.Text = $"{etapes[i].Nom} ({i + 1} sur {etapes.Length})…";
+                var mesure = etapes[i].Mesure;
+                resultats.Add(await Task.Run(mesure, jeton));
+                barre.Value = i + 1;
+            }
 
+            resultats.Add(Benchmarks.GpuIndisponible());
             var analyse = new AnalysePerformance(DateTime.Now, resultats);
             var precedente = HistoriquePerformances.Charger(FichierHistorique).LastOrDefault();
             HistoriquePerformances.Ajouter(FichierHistorique, analyse);
-
             Afficher(analyse, precedente);
         }
         catch (OperationCanceledException)
         {
-            TexteStatut.Text = "Mesures annulées.";
+            Corps.Children.Clear();
+            Corps.Children.Add(Ui.Message(InfoBarSeverity.Informational, "Mesures annulées", "Aucun résultat n'a été enregistré."));
         }
         catch (Exception ex)
         {
-            TexteStatut.Text = $"Mesures impossibles : {ex.Message}";
+            Corps.Children.Clear();
+            Corps.Children.Add(Ui.Message(InfoBarSeverity.Error, "Mesures impossibles", ex.Message));
         }
         finally
         {
-            Attente.IsActive = false;
             BoutonLancer.IsEnabled = true;
+            BoutonAnnuler.Visibility = Visibility.Collapsed;
         }
     }
 
     private void AfficherDerniere()
     {
-        var derniere = HistoriquePerformances.Charger(FichierHistorique).LastOrDefault();
-        if (derniere is not null)
+        var historique = HistoriquePerformances.Charger(FichierHistorique);
+        if (historique.LastOrDefault() is { } derniere)
         {
-            var avant = HistoriquePerformances.Charger(FichierHistorique).SkipLast(1).LastOrDefault();
-            Afficher(derniere, avant);
+            Afficher(derniere, historique.SkipLast(1).LastOrDefault());
+            return;
         }
+
+        Corps.Children.Clear();
+        var lancer = Ui.BoutonAccent("Lancer les mesures", "\uE768");
+        lancer.Click += BoutonLancer_Click;
+        Corps.Children.Add(Ui.Vide("\uEC4A", "Aucune mesure pour l'instant",
+            "Trois mesures rapides (processeur, mémoire, disque), environ 15 secondes. Les résultats sont gardés pour comparer avec les prochaines.", lancer));
     }
 
     private void Afficher(AnalysePerformance analyse, AnalysePerformance? precedente)
     {
-        ListeResultats.Children.Clear();
-        TexteStatut.Text = $"Analyse du {analyse.Date:g}" + (precedente is null ? " (première analyse : pas de comparaison)." : $", comparée à celle du {precedente.Date:g}.");
+        Corps.Children.Clear();
+        Corps.Children.Add(Ui.Legende($"Mesuré {Ui.Quand(analyse.Date)}"
+            + (precedente is null ? "  ·  première mesure : pas encore de comparaison." : $"  ·  comparé à la mesure du {precedente.Date.ToString("g", CultureInfo.CurrentCulture)}.")));
 
+        var grille = new GrilleAdaptative { LargeurMinimale = 240 };
         foreach (var r in analyse.Resultats)
         {
-            var variation = precedente is null ? null : HistoriquePerformances.Variation(precedente, analyse, r.Composant);
-            var resultat = r.Mesure
-                ? $"{r.Valeur} {r.Unite}" + (variation is null ? string.Empty : $" · {(variation >= 0 ? "+" : string.Empty)}{variation} % vs précédente")
-                : "non mesuré";
-
-            ListeResultats.Children.Add(new Border
-            {
-                Padding = new Thickness(12),
-                CornerRadius = new CornerRadius(6),
-                BorderBrush = (Brush)Application.Current.Resources["VitalisTexteSecondaire"],
-                BorderThickness = new Thickness(1),
-                Child = new StackPanel
-                {
-                    Spacing = 4,
-                    Children =
-                    {
-                        Texte(r.Composant + " · " + resultat, secondaire: false, gras: true),
-                        Texte("Méthode : " + r.Methode, secondaire: true),
-                        Texte("Limites : " + r.Limites, secondaire: true),
-                    },
-                },
-            });
+            grille.Children.Add(Carte(r, precedente is null ? null : HistoriquePerformances.Variation(precedente, analyse, r.Composant)));
         }
+
+        Corps.Children.Add(grille);
     }
 
-    private static TextBlock Texte(string texte, bool secondaire, bool gras = false) => new()
+    private static UIElement Carte(ResultatBenchmark r, double? variation)
     {
-        Text = texte,
-        TextWrapping = TextWrapping.Wrap,
-        FontWeight = gras ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal,
-        Foreground = (Brush)Application.Current.Resources[secondaire ? "VitalisTexteSecondaire" : "VitalisTexte"],
-    };
+        var p = new StackPanel { Spacing = 8 };
+        p.Children.Add(Ui.EnTeteCarte(Glyphe(r.Composant), r.Composant));
+
+        if (r.Mesure)
+        {
+            var valeur = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+            // L'unité est vide pour le processeur : elle est déjà dans la valeur (« 120 ms »).
+            valeur.Children.Add(new TextBlock { Text = r.Valeur, Style = Ui.Style("SubtitleTextBlockStyle"), TextWrapping = TextWrapping.Wrap, Foreground = Ui.Pinceau("VitalisTexte") });
+            var unite = Ui.Texte(r.Unite, secondaire: true);
+            unite.VerticalAlignment = VerticalAlignment.Bottom;
+            unite.Margin = new Thickness(0, 0, 0, 3);
+            valeur.Children.Add(unite);
+            p.Children.Add(valeur);
+
+            if (variation is { } v)
+            {
+                // Variation de ±3 % : dans le bruit de mesure, affichée comme stable.
+                p.Children.Add(Math.Abs(v) < 3
+                    ? Ui.Badge(Niveau.Neutre, $"Stable ({Signe(v)} %)")
+                    : v > 0 ? Ui.Badge(Niveau.Succes, $"{Signe(v)} % vs précédente") : Ui.Badge(Niveau.Attention, $"{Signe(v)} % vs précédente"));
+            }
+        }
+        else
+        {
+            p.Children.Add(Ui.Badge(Niveau.Neutre, "Non mesuré"));
+        }
+
+        var details = new StackPanel { Spacing = 6 };
+        details.Children.Add(Ui.Legende("Méthode : " + r.Methode));
+        details.Children.Add(Ui.Legende("Limites : " + r.Limites));
+        p.Children.Add(new Expander
+        {
+            Header = "Méthode et limites",
+            Content = details,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+        });
+        return Ui.Carte(p);
+    }
+
+    private static string Signe(double v) => (v >= 0 ? "+" : string.Empty) + v.ToString("0.#", CultureInfo.CurrentCulture);
 }

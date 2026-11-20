@@ -1,0 +1,32 @@
+<Page
+    x:Class="Vitalis.App.Views.MaterielPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Structure commune des pages : en-tête (titre, résumé, actions), puis le corps rempli par le code. -->
+    <ScrollViewer HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Style="{StaticResource VitalisContenuPage}">
+        <Grid ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="4">
+                <TextBlock x:Name="TitrePage" Text="Matériel" Style="{StaticResource VitalisTitrePage}" />
+                <TextBlock x:Name="TexteResume" Text="Composants détectés par Windows (WMI). Lecture seule." Style="{StaticResource VitalisDescription}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                <Button x:Name="BoutonActualiser" Click="BoutonActualiser_Click" AutomationProperties.Name="Actualiser">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        <TextBlock x:Name="BoutonActualiserTexte" Text="Actualiser" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel x:Name="Corps" Spacing="16" />
+        </StackPanel>
+    </ScrollViewer>
+
+</Page>

@@ -41,4 +41,13 @@ public partial class App : Application
             fenetre.AppliquerTheme(theme);
         }
     }
+
+    /// <summary>Ouvre une page de la fenêtre principale par sa clé (voir CataloguePages).</summary>
+    public static void Naviguer(string cle)
+    {
+        if (Current is App app && app._fenetre is MainWindow fenetre)
+        {
+            fenetre.Naviguer(cle);
+        }
+    }
 }

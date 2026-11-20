@@ -4,19 +4,54 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid x:Name="Racine">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="260" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- Menu latéral construit dans le code-behind (boutons). Remplace NavigationView, qui plantait au démarrage. -->
-        <StackPanel
-            x:Name="MenuPanneau"
-            Grid.Column="0"
-            Padding="12"
-            Spacing="4" />
+        <!-- Barre de titre personnalisée (la fenêtre étend son contenu dessous). -->
+        <Grid x:Name="BarreTitre" Grid.ColumnSpan="2" Padding="16,0,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                <TextBlock x:Name="TitreFenetre" Text="Vitalis" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
 
-        <Frame x:Name="ContenuFrame" Grid.Column="1" />
+        <!-- Menu latéral (ListView : navigation au clavier par flèches, indicateur de sélection). -->
+        <Grid Grid.Row="1" Grid.Column="0" Padding="4,4,4,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <ListView
+                x:Name="Menu"
+                SelectionMode="Single"
+                SelectionChanged="Menu_SelectionChanged"
+
+                AutomationProperties.Name="Menu principal" />
+            <ListView
+                x:Name="MenuBas"
+                Grid.Row="1"
+                SelectionMode="Single"
+                SelectionChanged="Menu_SelectionChanged"
+
+                AutomationProperties.Name="Paramètres" />
+        </Grid>
+
+        <!-- Zone de contenu, sur une couche légèrement opaque comme les applications Windows 11. -->
+        <Border
+            Grid.Row="1"
+            Grid.Column="1"
+            Background="{ThemeResource LayerFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1,1,0,0"
+            CornerRadius="8,0,0,0">
+            <Frame x:Name="ContenuFrame" />
+        </Border>
     </Grid>
 
 </Window>

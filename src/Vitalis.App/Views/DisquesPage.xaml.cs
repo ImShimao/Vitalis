@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Vitalis.Core.Disques;
 using Vitalis.Core.Materiel;
 
@@ -12,39 +11,23 @@ namespace Vitalis.App.Views;
 /// <summary>Page « Disques » : santé des disques physiques et espace libre des lecteurs.</summary>
 public sealed partial class DisquesPage : Page
 {
-    private CancellationTokenSource? _annulation;
-
     public DisquesPage()
     {
         InitializeComponent();
-        Loaded += async (_, _) => await ChargerAsync();
-        Unloaded += (_, _) => _annulation?.Cancel();
+        Loaded += async (_, _) => await ChargerAsync(forcer: false);
     }
 
-    private async Task ChargerAsync()
+    private async void BoutonActualiser_Click(object sender, RoutedEventArgs e) => await ChargerAsync(forcer: true);
+
+    private Task ChargerAsync(bool forcer)
     {
-        _annulation?.Cancel();
-        _annulation = new CancellationTokenSource();
-
-        TexteStatut.Text = "Analyse en cours…";
-        ListeDisques.Children.Clear();
-        ListeLecteurs.Children.Clear();
-
-        try
-        {
-            // Diagnostic : seulement en administrateur (les compteurs SMART ne sont lisibles qu'alors).
-            Action<string>? journal = Droits.EstAdministrateur() ? EcrireDiagnostic : null;
-            var rapport = await new AnalyseDisques(new WmiSource(), journal).AnalyserAsync(_annulation.Token);
-            Afficher(rapport);
-        }
-        catch (OperationCanceledException)
-        {
-            // Page quittée pendant l'analyse : rien à afficher.
-        }
-        catch (Exception e)
-        {
-            TexteStatut.Text = $"Analyse impossible : {e.Message}";
-        }
+        // Diagnostic : seulement en administrateur (les compteurs SMART ne sont lisibles qu'alors).
+        Action<string>? journal = Droits.EstAdministrateur() ? EcrireDiagnostic : null;
+        return Ui.ChargerAsync(
+            EtatAnalyse.Disques, forcer, Corps, BoutonActualiser,
+            "Lecture des disques et des lecteurs… (quelques secondes)",
+            ct => new AnalyseDisques(new WmiSource(), journal).AnalyserAsync(ct),
+            Afficher);
     }
 
     /// <summary>
@@ -68,87 +51,127 @@ public sealed partial class DisquesPage : Page
 
     private void Afficher(RapportDisques rapport)
     {
-        var bouton = !Droits.EstAdministrateur();
-        BoutonAdmin.Visibility = bouton ? Visibility.Visible : Visibility.Collapsed;
-
-        TexteStatut.Text = rapport.SmartComplet
-            ? "Compteurs SMART lus pour tous les disques."
-            : rapport.RaisonSmart ?? "Compteurs SMART incomplets.";
-
-        AfficherSection(rapport.Disques, ListeDisques, "Aucun disque lisible", d => new[]
+        // SMART : message, et relance administrateur seulement si elle peut aider.
+        if (!rapport.SmartComplet)
         {
-            $"{d.Nom ?? "Disque sans nom"} · {TypeTexte(d.Type)} · {Gio(d.TailleOctets)} · {SanteTexte(d.Sante)}",
-            d.TemperatureC is null && d.UsurePourcent is null
-                ? "SMART non lu (droits administrateur requis)"
-                : $"Température {d.TemperatureC?.ToString(CultureInfo.InvariantCulture) ?? "n/d"} °C · " +
-                  $"Usure {d.UsurePourcent?.ToString(CultureInfo.InvariantCulture) ?? "n/d"} % · " +
-                  $"Heures de marche {d.HeuresMarche?.ToString(CultureInfo.InvariantCulture) ?? "n/d"} · " +
-                  $"Erreurs de lecture {d.ErreursLectureTotal?.ToString(CultureInfo.InvariantCulture) ?? "n/d"}",
-        });
-
-        AfficherSection(rapport.Lecteurs, ListeLecteurs, "Aucun lecteur fixe lisible", l => new[]
-        {
-            $"{l.Lettre} {l.Nom ?? string.Empty} · {Gio(l.EspaceLibreOctets)} libres sur {Gio(l.TailleOctets)} · " +
-            $"{(l.PourcentLibre is null ? "n/d" : l.PourcentLibre.Value.ToString("0", CultureInfo.InvariantCulture))} % · {EspaceTexte(l.Statut)}",
-        });
-    }
-
-    private static void AfficherSection<T>(Section<T> section, StackPanel conteneur, string vide, Func<T, string[]> lignes)
-    {
-        if (section.Etat == Disponibilite.Indisponible || section.Elements.Count == 0)
-        {
-            conteneur.Children.Add(Texte($"{vide}. {section.Raison}", secondaire: true));
-            return;
-        }
-
-        if (section.Etat == Disponibilite.Partielle && section.Raison is not null)
-        {
-            conteneur.Children.Add(Texte(section.Raison, secondaire: true));
-        }
-
-        foreach (var element in section.Elements)
-        {
-            foreach (var ligne in lignes(element))
+            Button? action = null;
+            if (!Droits.EstAdministrateur())
             {
-                conteneur.Children.Add(Texte(ligne, secondaire: false));
+                action = new Button { Content = "Relancer en administrateur" };
+                action.Click += BoutonAdmin_Click;
             }
+
+            Corps.Children.Add(Ui.Message(InfoBarSeverity.Informational, "Compteurs SMART incomplets",
+                rapport.RaisonSmart ?? "Température, usure et heures de marche ne sont pas lisibles.", action));
+        }
+
+        Corps.Children.Add(Ui.TitreSection("Disques physiques"));
+        if (rapport.Disques.Elements.Count == 0)
+        {
+            Corps.Children.Add(Ui.Vide("\uEDA2", "Aucun disque lisible", rapport.Disques.Raison ?? "Windows n'a renvoyé aucun disque."));
+        }
+        else
+        {
+            var grille = new GrilleAdaptative { LargeurMinimale = 340 };
+            foreach (var d in rapport.Disques.Elements)
+            {
+                grille.Children.Add(CarteDisque(d));
+            }
+
+            Corps.Children.Add(grille);
+        }
+
+        Corps.Children.Add(Ui.TitreSection("Espace libre par lecteur"));
+        if (rapport.Lecteurs.Elements.Count == 0)
+        {
+            Corps.Children.Add(Ui.Vide("\uE7B8", "Aucun lecteur fixe lisible", rapport.Lecteurs.Raison ?? "Windows n'a renvoyé aucun lecteur."));
+        }
+        else
+        {
+            var grille = new GrilleAdaptative { LargeurMinimale = 300 };
+            foreach (var l in rapport.Lecteurs.Elements)
+            {
+                grille.Children.Add(CarteLecteur(l));
+            }
+
+            Corps.Children.Add(grille);
         }
     }
 
-    private static TextBlock Texte(string texte, bool secondaire) => new()
+    private static UIElement CarteDisque(DisqueSante d)
     {
-        Text = texte,
-        TextWrapping = TextWrapping.Wrap,
-        Foreground = (Brush)Application.Current.Resources[secondaire ? "VitalisTexteSecondaire" : "VitalisTexte"],
-    };
+        var p = new StackPanel { Spacing = 12 };
+        p.Children.Add(Ui.EnTeteCarte("\uEDA2", d.Nom ?? "Disque sans nom", d.Sante switch
+        {
+            StatutSante.Sain => Ui.Badge(Niveau.Succes, "Sain"),
+            StatutSante.Attention => Ui.Badge(Niveau.Attention, "Attention"),
+            StatutSante.Critique => Ui.Badge(Niveau.Critique, "Critique"),
+            _ => Ui.Badge(Niveau.Neutre, "Inconnu"),
+        }));
 
-    /// <summary>Le statut est écrit en toutes lettres avec un symbole : la couleur n'est jamais le seul moyen de le lire.</summary>
-    private static string SanteTexte(StatutSante sante) => sante switch
+        var smartLu = d.TemperatureC is not null || d.UsurePourcent is not null || d.HeuresMarche is not null;
+        var lignes = new List<(string, string?)>
+        {
+            ("Type", d.Type switch { TypeMedia.Hdd => "Disque dur (HDD)", TypeMedia.Ssd => "SSD", TypeMedia.Scm => "Mémoire de stockage (SCM)", _ => "inconnu" }),
+            ("Capacité", Ui.Gio(d.TailleOctets)),
+        };
+
+        // Sans compteurs SMART, quatre lignes « non disponible » n'apprennent rien : une seule phrase les remplace.
+        if (smartLu)
+        {
+            lignes.AddRange(
+            [
+            ("Température", d.TemperatureC is null ? null : $"{d.TemperatureC} °C" + (d.TemperatureMaxC is null ? string.Empty : $" (max. {d.TemperatureMaxC} °C)")),
+            ("Usure", d.UsurePourcent is null ? null : $"{d.UsurePourcent} %"),
+            ("Heures de marche", d.HeuresMarche?.ToString("N0", CultureInfo.CurrentCulture)),
+            ("Erreurs de lecture", d.ErreursLectureTotal?.ToString("N0", CultureInfo.CurrentCulture)),
+            ]);
+        }
+
+        p.Children.Add(Ui.Proprietes(lignes));
+
+        if (!smartLu)
+        {
+            p.Children.Add(Ui.Legende("Température, usure et heures de marche : non fournies par Windows pour ce disque."));
+        }
+
+        return Ui.Carte(p);
+    }
+
+    private static UIElement CarteLecteur(LecteurEspace l)
     {
-        StatutSante.Sain => "✔ Sain",
-        StatutSante.Attention => "⚠ Attention",
-        StatutSante.Critique => "✖ Critique",
-        _ => "? Inconnu",
-    };
+        var p = new StackPanel { Spacing = 10 };
+        var titre = string.IsNullOrWhiteSpace(l.Nom) ? $"Lecteur {l.Lettre}" : $"{l.Nom} ({l.Lettre})";
+        p.Children.Add(Ui.EnTeteCarte("\uE7B8", titre, l.Statut switch
+        {
+            StatutEspace.Sain => Ui.Badge(Niveau.Succes, "Suffisant"),
+            StatutEspace.Attention => Ui.Badge(Niveau.Attention, "À surveiller"),
+            _ => Ui.Badge(Niveau.Critique, "Presque plein"),
+        }));
 
-    private static string EspaceTexte(StatutEspace statut) => statut switch
-    {
-        StatutEspace.Sain => "✔ Sain",
-        StatutEspace.Attention => "⚠ Attention",
-        _ => "✖ Critique",
-    };
+        if (l.PourcentLibre is { } libre)
+        {
+            var barre = new ProgressBar
+            {
+                Minimum = 0,
+                Maximum = 100,
+                Value = 100 - libre,
+                Height = 6,
+                Foreground = Ui.Pinceau(l.Statut switch
+                {
+                    StatutEspace.Sain => "AccentFillColorDefaultBrush",
+                    StatutEspace.Attention => "VitalisAttention",
+                    _ => "VitalisCritique",
+                }),
+            };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(barre, $"{100 - libre:0} % utilisés");
+            p.Children.Add(barre);
+        }
 
-    private static string TypeTexte(TypeMedia type) => type switch
-    {
-        TypeMedia.Hdd => "HDD",
-        TypeMedia.Ssd => "SSD",
-        TypeMedia.Scm => "SCM",
-        _ => "type inconnu",
-    };
-
-    private static string Gio(long? octets) => octets is null
-        ? "n/d"
-        : (octets.Value / 1024.0 / 1024.0 / 1024.0).ToString("0.0", CultureInfo.CurrentCulture) + " Gio";
+        p.Children.Add(Ui.Texte($"{Ui.Gio(l.EspaceLibreOctets)} libres sur {Ui.Gio(l.TailleOctets)}"
+            + (l.PourcentLibre is null ? string.Empty : $"  ·  {l.PourcentLibre.Value.ToString("0", CultureInfo.CurrentCulture)} % libre"), secondaire: true));
+        return Ui.Carte(p);
+    }
 
     /// <summary>Demande une confirmation avant toute relance : Windows demandera ensuite l'élévation (UAC).</summary>
     private async void BoutonAdmin_Click(object sender, RoutedEventArgs e)
@@ -175,7 +198,7 @@ public sealed partial class DisquesPage : Page
         }
         catch (Win32Exception)
         {
-            TexteStatut.Text = "Relance annulée : Windows n'a pas accordé les droits administrateur.";
+            Corps.Children.Insert(0, Ui.Message(InfoBarSeverity.Warning, "Relance annulée", "Windows n'a pas accordé les droits administrateur."));
         }
     }
 }

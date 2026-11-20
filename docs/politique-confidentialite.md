@@ -8,7 +8,8 @@ Vitalis lit des informations sur votre PC pour l'afficher. Il ne les envoie à a
 
 - l'ouverture d'un lien vers le site officiel d'un fabricant, à votre demande, dans votre navigateur ;
 - la recherche et, à votre demande, l'installation des mises à jour Windows et des pilotes, faites par Windows Update ;
-- la liste et, à votre demande, la mise à jour des logiciels, faites par winget depuis sa source officielle (Microsoft).
+- la liste et, à votre demande, la mise à jour des logiciels, faites par winget depuis sa source officielle (Microsoft) ;
+- la recherche d'une nouvelle version de Vitalis sur GitHub, uniquement quand vous cliquez sur « Rechercher une mise à jour » (aucune donnée envoyée hormis l'adresse IP inhérente à toute connexion).
 
 ## Données lues
 

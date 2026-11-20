@@ -40,3 +40,7 @@ Trois benchmarks mesurés (processeur, mémoire vive, disque), un GPU non mesur�
 - Les mesures varient selon la charge de la machine pendant le test.
 
 Liens : [[T-010-performances]].
+
+## Carte graphique et indice Windows (0.2.0)
+
+Après les trois mesures, Vitalis lance « winsat formal » (évaluation officielle de Windows, 1 à 3 minutes, administrateur), puis lit `Win32_WinSAT` : score 3D (D3DScore) et bureau (GraphicsScore) pour la carte graphique, et une carte « Indice Windows (WinSAT) » avec les cinq notes. Différence expliquée : WinSAT note de 1,0 à 9,9 (plafond atteint par les cartes récentes), Vitalis mesure une durée ou un débit brut, comparable entre deux analyses du même PC. Sans évaluation (état 3) : « Non mesuré », aucun score inventé. Tests : `BenchmarksTests.WinSat_*`.

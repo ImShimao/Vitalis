@@ -1,0 +1,47 @@
+name: Publication
+
+# Une étiquette « v0.2.0 » construit Vitalis.exe et l'installeur, puis crée la version GitHub.
+# La vérification de mise à jour de Vitalis (Paramètres) lit cette page.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  publier:
+    runs-on: windows-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Tester
+        run: dotnet test Vitalis.sln -c Release --filter "Categorie!=Reel"
+
+      - name: Installer Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Construire l'exécutable et l'installeur
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          dotnet publish src/Vitalis.App -c Release -p:Autonome=true
+          Copy-Item "src/Vitalis.App/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish/Vitalis.exe" "Vitalis.exe"
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DVersion=$version" "installeur\Vitalis.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Installeur : échec" }
+
+      - name: Créer la version GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          gh release create "${{ github.ref_name }}" "Vitalis.exe" "installeur/Sortie/Vitalis-Setup-$version.exe" `
+            --title "Vitalis $version" --notes-file "Vitalis-Vault/08-Releases/v$version.md"

@@ -16,11 +16,11 @@ Mesurer CPU, RAM, disque et GPU, garder un historique et comparer les analyses. 
 
 ## Critères d'acceptation
 
-- [ ] Benchmarks CPU, RAM, disque et GPU
-- [ ] Méthode, durée et limites affichées avec chaque résultat
-- [ ] Historique des analyses et comparaison entre deux analyses
-- [ ] Score WinSAT comparé aux autres méthodes, avec la différence expliquée
-- [ ] `04-Fonctions/performances.md` créé
+- [x] Benchmarks CPU, RAM, disque et GPU
+- [x] Méthode, durée et limites affichées avec chaque résultat
+- [x] Historique des analyses et comparaison entre deux analyses
+- [x] Score WinSAT comparé aux autres méthodes, avec la différence expliquée
+- [x] `04-Fonctions/performances.md` créé
 
 ## Fichiers de code concernés
 

@@ -92,4 +92,27 @@ public class RapportHtmlTests
         html.Should().Contain("indisponible");
         html.Should().Contain("Analyse matériel non disponible");
     }
+
+    [Fact]
+    public void Rapport_PilotesEtCapteurs_SansDonneePersonnelle()
+    {
+        var ancien = new Vitalis.Core.Pilotes.Pilote($"Carte de {Utilisateur}", "Intel", "1.0", new DateTime(2020, 1, 1), "NET", true, null);
+        var pilotes = new Vitalis.Core.Pilotes.RapportPilotes(new Section<Vitalis.Core.Pilotes.Pilote>(Disponibilite.Disponible, [ancien]), 1);
+        var dispo = new Vitalis.Core.Pilotes.ComparaisonPilote(
+            new Vitalis.Core.Pilotes.PiloteDisponible("Pilote", "Modèle X", "Intel", null, new DateTime(2026, 1, 1), "pci-x", "id", false), ancien);
+        var capteurs = new[]
+        {
+            new Vitalis.Core.SanteLive.ComposantLive("NVIDIA GeForce RTX 3050", Vitalis.Core.SanteLive.Categorie.CarteGraphique,
+                [new Vitalis.Core.SanteLive.Mesure("GPU Core", Vitalis.Core.SanteLive.TypeMesure.Temperature, 84)]),
+        };
+
+        var html = new RapportHtml(Utilisateur, Machine).Generer(Resultat(), pilotes, [dispo], capteurs);
+
+        html.Should().Contain("Pilotes plus récents").And.Contain("<td>1.0 (").And.Contain("84 °C").And.Contain("chaud");
+        html.Should().NotContain(Utilisateur);
+    }
+
+    [Fact]
+    public void Rapport_SansPilotes_LeDit() =>
+        new RapportHtml(Utilisateur, Machine).Generer(Resultat()).Should().Contain("Analyse des pilotes non faite");
 }

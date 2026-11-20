@@ -53,6 +53,34 @@ public class BenchmarksTests : IDisposable
     }
 
     [Fact]
+    public void WinSat_Valide_ScoreGpuEtSynthese()
+    {
+        var source = new Vitalis.Core.Tests.Materiel.FauxSourceWmi().Avec("Win32_WinSAT", Vitalis.Core.Tests.Materiel.FauxSourceWmi.Ligne(
+            ("CPUScore", 9.3f), ("D3DScore", 9.9f), ("DiskScore", 9.25f), ("GraphicsScore", 9.1f), ("MemoryScore", 9.3f), ("WinSATAssessmentState", 1)));
+
+        var r = Benchmarks.WinSat(source);
+
+        r.Should().HaveCount(2);
+        r[0].Composant.Should().Be("Carte graphique");
+        r[0].Mesure.Should().BeTrue();
+        r[0].Score.Should().BeApproximately(9.9, 0.01);
+        r[1].Limites.Should().Contain("Différence avec les mesures Vitalis");
+    }
+
+    [Fact]
+    public void WinSat_AucuneEvaluation_PasDeScoreInvente()
+    {
+        var source = new Vitalis.Core.Tests.Materiel.FauxSourceWmi().Avec("Win32_WinSAT", Vitalis.Core.Tests.Materiel.FauxSourceWmi.Ligne(
+            ("D3DScore", 0f), ("WinSATAssessmentState", 3)));
+
+        var r = Benchmarks.WinSat(source, "WinSAT a échoué (code 1).");
+
+        r.Should().ContainSingle();
+        r[0].Mesure.Should().BeFalse();
+        r[0].Limites.Should().Be("WinSAT a échoué (code 1).");
+    }
+
+    [Fact]
     public void Disque_EcritEtSupprimeLeFichierTemporaire()
     {
         var r = Benchmarks.Disque(_dossier);

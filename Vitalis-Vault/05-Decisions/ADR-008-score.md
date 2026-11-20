@@ -34,3 +34,7 @@ Le tableau de bord affiche un score sur 100. La spec demande « score global / c
 - **À valider par l'utilisateur** : poids, présence des logiciels dans le score, seuils.
 
 Liens : [[tableau-de-bord]], [[T-006-tableau-de-bord]].
+
+## Mise à jour 0.2.0 (2026-11-20)
+
+Les pilotes plus récents du catalogue Windows Update sont **déjà** comptés dans la composante « Mises à jour » : la recherche des mises à jour en attente inclut le type `Driver`. Les températures ne sont pas ajoutées au score : un relevé instantané varie avec la charge et rendrait le score instable ; elles figurent dans le rapport.

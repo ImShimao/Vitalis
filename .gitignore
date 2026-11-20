@@ -489,3 +489,6 @@ $RECYCLE.BIN/
 
 # Exécutable publié à la racine (dotnet publish -p:Autonome=true), trop lourd pour Git.
 /Vitalis.exe
+
+# Installeur compil�
+installeur/Sortie/

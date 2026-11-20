@@ -6,6 +6,7 @@ using Xunit;
 namespace Vitalis.Core.Tests.Disques;
 
 /// <summary>Lecture réelle sur la machine de test. Les disques physiques ne sont pas testés ici : ils dépendent des droits.</summary>
+[Trait("Categorie", "Reel")]
 public class AnalyseDisquesReelTests
 {
     [Fact]

@@ -6,6 +6,7 @@ using Xunit;
 namespace Vitalis.Core.Tests.MisesAJour;
 
 /// <summary>Appels réels à Windows Update Agent sur la machine de test (Windows uniquement).</summary>
+[Trait("Categorie", "Reel")]
 public class WuaReelTests
 {
     [Fact]

@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
+using Vitalis.Core.Materiel;
 
 namespace Vitalis.Core.Performances;
 
@@ -121,6 +123,83 @@ public static class Benchmarks
     public static ResultatBenchmark GpuIndisponible() => new(
         "Carte graphique", null, "", null, "Aucun benchmark GPU dans cette version",
         "Une mesure GPU demande une méthode à valider (API graphique, durée, charge). Non réalisée.", false);
+
+    /// <summary>Durée maximale de « winsat formal » (évaluation complète de Windows, 1 à 3 minutes en général).</summary>
+    private static readonly TimeSpan DelaiWinSat = TimeSpan.FromMinutes(6);
+
+    /// <summary>
+    /// Relance l'évaluation officielle de Windows (« winsat formal », droits administrateur). Elle met à jour Win32_WinSAT.
+    /// Renvoie null si réussie, sinon la raison.
+    /// </summary>
+    public static string? LancerEvaluationWindows(CancellationToken ct = default)
+    {
+        var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "winsat.exe");
+        if (!File.Exists(exe))
+        {
+            return "WinSAT n'est pas présent sur ce Windows.";
+        }
+
+        using var p = Process.Start(new ProcessStartInfo(exe, "formal") { UseShellExecute = false, CreateNoWindow = true })
+            ?? throw new InvalidOperationException("WinSAT n'a pas pu être lancé.");
+        var limite = DateTime.UtcNow + DelaiWinSat;
+        while (!p.WaitForExit(500))
+        {
+            if (ct.IsCancellationRequested || DateTime.UtcNow > limite)
+            {
+                p.Kill(entireProcessTree: true);
+                ct.ThrowIfCancellationRequested();
+                return "WinSAT n'a pas terminé dans le délai prévu.";
+            }
+        }
+
+        return p.ExitCode == 0 ? null : $"WinSAT a échoué (code {p.ExitCode}).";
+    }
+
+    /// <summary>
+    /// Indices WinSAT de Windows (Win32_WinSAT, doc Microsoft vérifiée le 2026-11-20) : note de 1,0 à 9,9 par composant.
+    /// WinSATAssessmentState : 1 = valide, 2 = matériel changé depuis l'évaluation, 3 = aucune évaluation.
+    /// Renvoie la carte graphique (score 3D) et la synthèse des indices, pour comparer avec les mesures de Vitalis.
+    /// </summary>
+    public static IReadOnlyList<ResultatBenchmark> WinSat(ISourceWmi source, string? raisonEchec = null)
+    {
+        IReadOnlyDictionary<string, object?>? l;
+        try
+        {
+            l = source.Requeter(@"root\CIMV2", "Win32_WinSAT",
+                ["CPUScore", "D3DScore", "DiskScore", "GraphicsScore", "MemoryScore", "WinSATAssessmentState"]).FirstOrDefault();
+        }
+        catch (Exception)
+        {
+            l = null;
+        }
+
+        double? Note(string cle) => l is not null && l.TryGetValue(cle, out var v) && v is not null
+            && double.TryParse(Convert.ToString(v, CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture, out var d) && d > 0 ? d : null;
+
+        var etat = l is null ? null : Conversions.Entier(l, "WinSATAssessmentState");
+        var d3d = Note("D3DScore");
+        if (l is null || etat is 3 or null || d3d is null)
+        {
+            return [GpuIndisponible() with
+            {
+                Methode = "Indice WinSAT de Windows (Win32_WinSAT)",
+                Limites = raisonEchec ?? "Aucune évaluation Windows disponible sur ce PC.",
+            }];
+        }
+
+        var avertissement = etat == 2 ? " Le matériel a changé depuis l'évaluation : relancez-la." : string.Empty;
+        string F(double? n) => n is null ? "n/d" : n.Value.ToString("0.0#", CultureInfo.CurrentCulture);
+        var gpu = new ResultatBenchmark("Carte graphique", $"3D {F(d3d)} · bureau {F(Note("GraphicsScore"))} sur 9,9", "", d3d,
+            "Indice WinSAT de Windows (évaluation « winsat formal » : rendu Direct3D et composition du bureau)",
+            "Note plafonnée à 9,9 : les cartes récentes atteignent toutes le maximum, ce qui ne permet pas de les départager." + avertissement, true);
+        var synthese = new ResultatBenchmark("Indice Windows (WinSAT)",
+            $"processeur {F(Note("CPUScore"))} · mémoire {F(Note("MemoryScore"))} · disque {F(Note("DiskScore"))} · graphique {F(Note("GraphicsScore"))} · 3D {F(d3d)}",
+            "", null,
+            "Notes officielles de Windows, de 1,0 à 9,9, mesurées par WinSAT",
+            "Différence avec les mesures Vitalis : WinSAT note sur une échelle fixe plafonnée, Vitalis mesure une durée ou un débit brut, comparable seulement entre deux analyses du même PC." + avertissement,
+            true);
+        return [gpu, synthese];
+    }
 
     public static int Crible(int limite)
     {

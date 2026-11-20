@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using Vitalis.Core.Disques;
 using Vitalis.Core.Materiel;
 using Vitalis.Core.MisesAJour;
+using Vitalis.Core.Pilotes;
+using Vitalis.Core.SanteLive;
 using Vitalis.Core.TableauDeBord;
 
 namespace Vitalis.Core.Rapport;
@@ -46,7 +48,10 @@ public sealed class RapportHtml
         return MacRegex.Replace(propre, "[adresse masquée]");
     }
 
-    public string Generer(ResultatTableauDeBord r)
+    /// <param name="pilotes">Pilotes installés (page Pilotes), si l'analyse a été faite.</param>
+    /// <param name="pilotesDisponibles">Pilotes plus récents du catalogue Windows Update.</param>
+    /// <param name="capteurs">Relevé des capteurs au moment de l'export.</param>
+    public string Generer(ResultatTableauDeBord r, RapportPilotes? pilotes = null, IReadOnlyList<ComparaisonPilote>? pilotesDisponibles = null, IReadOnlyList<ComposantLive>? capteurs = null)
     {
         var sb = new StringBuilder();
         sb.Append("<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Rapport Vitalis</title>");
@@ -74,11 +79,89 @@ public sealed class RapportHtml
         AjouterMateriel(sb, r.Materiel);
         AjouterDisques(sb, r.Disques);
         AjouterMisesAJour(sb, r.MisesAJour);
+        AjouterPilotes(sb, pilotes, pilotesDisponibles);
+        AjouterCapteurs(sb, capteurs);
 
         sb.Append("<h2>Données exclues</h2><p class=\"note\">Ce rapport ne contient pas : le nom d'utilisateur, le nom de la machine, ")
           .Append("l'adresse MAC, les numéros de série, les noms de volumes choisis par l'utilisateur ni les identifiants internes.</p>");
         sb.Append("</body></html>");
         return sb.ToString();
+    }
+
+    private void AjouterPilotes(StringBuilder sb, RapportPilotes? pilotes, IReadOnlyList<ComparaisonPilote>? disponibles)
+    {
+        sb.Append("<h2>Pilotes</h2>");
+        if (pilotes is null && disponibles is null)
+        {
+            sb.Append("<p class=\"gris\">Analyse des pilotes non faite (ouvrez la page Pilotes avant d'exporter).</p>");
+            return;
+        }
+
+        if (pilotes is not null)
+        {
+            var generiques = pilotes.Pilotes.Elements.Count(p => p.Generique);
+            sb.Append($"<p>{pilotes.Pilotes.Elements.Count} pilotes installés, dont {generiques} génériques Windows. {pilotes.NombreAnciens} pilotes de fabricant ont plus de deux ans.</p>");
+            var anciens = pilotes.Pilotes.Elements.Where(p => p.Ancien).ToList();
+            if (anciens.Count > 0)
+            {
+                sb.Append("<table><tr><th>Pilote de plus de deux ans</th><th>Fabricant</th><th>Version</th><th>Date</th></tr>");
+                foreach (var p in anciens)
+                {
+                    sb.Append($"<tr><td>{Enc(Masquer(p.Appareil))}</td><td>{Enc(p.Fabricant ?? "inconnu")}</td><td>{Enc(p.Version ?? "n/d")}</td>" +
+                              $"<td>{(p.Date is null ? "n/d" : p.Date.Value.ToString("d MMM yyyy", CultureInfo.CurrentCulture))}</td></tr>");
+                }
+
+                sb.Append("</table>");
+            }
+        }
+
+        if (disponibles is not null)
+        {
+            sb.Append("<h3>Pilotes plus récents (catalogue Windows Update)</h3>");
+            if (disponibles.Count == 0)
+            {
+                sb.Append("<p class=\"gris\">Aucun pilote plus récent proposé.</p>");
+            }
+            else
+            {
+                sb.Append("<table><tr><th>Matériel</th><th>Installé</th><th>Proposé</th></tr>");
+                foreach (var c in disponibles)
+                {
+                    var installe = c.Installe is { } p ? $"{p.Version ?? "n/d"} ({(p.Date is null ? "date n/d" : p.Date.Value.ToString("d MMM yyyy", CultureInfo.CurrentCulture))})" : "non identifié";
+                    var propose = c.Disponible.Date is null ? "date n/d" : c.Disponible.Date.Value.ToString("d MMM yyyy", CultureInfo.CurrentCulture);
+                    sb.Append($"<tr><td>{Enc(Masquer(c.Installe?.Appareil ?? c.Disponible.Modele ?? c.Disponible.Titre))}</td><td>{Enc(installe)}</td><td>{Enc(propose)}{Enc(c.Disponible.Fournisseur is null ? string.Empty : " · " + c.Disponible.Fournisseur)}</td></tr>");
+                }
+
+                sb.Append("</table>");
+            }
+        }
+    }
+
+    private void AjouterCapteurs(StringBuilder sb, IReadOnlyList<ComposantLive>? capteurs)
+    {
+        sb.Append("<h2>Températures et charges</h2>");
+        if (capteurs is null || capteurs.Count == 0)
+        {
+            sb.Append("<p class=\"gris\">Capteurs non lus.</p>");
+            return;
+        }
+
+        sb.Append("<table><tr><th>Composant</th><th>Température</th><th>Utilisation</th><th>État</th></tr>");
+        foreach (var c in capteurs)
+        {
+            var t = AnalyseCapteurs.TemperaturePrincipale(c);
+            var u = AnalyseCapteurs.ChargePrincipale(c);
+            var etat = t is null ? "—" : AnalyseCapteurs.Niveau(c.Categorie, t) switch
+            {
+                NiveauMesure.Critique => "trop chaud",
+                NiveauMesure.Attention => "chaud",
+                _ => "normal",
+            };
+            sb.Append($"<tr><td>{Enc(Masquer(c.Nom))}</td><td>{(t is null ? "non lue" : t.Value.ToString("0", CultureInfo.InvariantCulture) + " °C")}</td>" +
+                      $"<td>{(u is null ? "n/d" : u.Value.ToString("0", CultureInfo.InvariantCulture) + " %")}</td><td>{etat}</td></tr>");
+        }
+
+        sb.Append("</table><p class=\"note\">Relevé instantané au moment de l'export.</p>");
     }
 
     private void AjouterMateriel(StringBuilder sb, RapportMateriel? m)

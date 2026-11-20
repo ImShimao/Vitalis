@@ -51,6 +51,7 @@ public class CapteursLiveTests
 
     /// <summary>Lecture réelle : ne doit jamais lever d'exception, même sans pilote PawnIO ni droits administrateur.</summary>
     [Fact]
+    [Trait("Categorie", "Reel")]
     public void LectureReelle_SansException()
     {
         using var capteurs = new CapteursLive();

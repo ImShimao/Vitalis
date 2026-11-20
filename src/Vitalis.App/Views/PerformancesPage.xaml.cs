@@ -5,7 +5,7 @@ using Vitalis.Core.Performances;
 
 namespace Vitalis.App.Views;
 
-/// <summary>Page « Performances » : benchmarks CPU, RAM, disque ; historique et comparaison.</summary>
+/// <summary>Page « Performances » : benchmarks CPU, RAM, disque, carte graphique (WinSAT) ; historique et comparaison.</summary>
 public sealed partial class PerformancesPage : Page
 {
     private static readonly string Dossier = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Vitalis");
@@ -47,7 +47,7 @@ public sealed partial class PerformancesPage : Page
             ("Disque", () => Benchmarks.Disque(Path.GetTempPath(), jeton)),
         };
 
-        var barre = new ProgressBar { Minimum = 0, Maximum = etapes.Length, Value = 0 };
+        var barre = new ProgressBar { Minimum = 0, Maximum = etapes.Length + 1, Value = 0 };
         var texte = Ui.Texte(string.Empty, secondaire: true);
         Corps.Children.Clear();
         var attente = new StackPanel { Spacing = 10 };
@@ -68,7 +68,10 @@ public sealed partial class PerformancesPage : Page
                 barre.Value = i + 1;
             }
 
-            resultats.Add(Benchmarks.GpuIndisponible());
+            texte.Text = $"Carte graphique : évaluation officielle de Windows (WinSAT), 1 à 3 minutes ({etapes.Length + 1} sur {etapes.Length + 1})…";
+            var raison = await Task.Run(() => Benchmarks.LancerEvaluationWindows(jeton), jeton);
+            resultats.AddRange(Benchmarks.WinSat(new Vitalis.Core.Materiel.WmiSource(), raison));
+            barre.Value = etapes.Length + 1;
             var analyse = new AnalysePerformance(DateTime.Now, resultats);
             var precedente = HistoriquePerformances.Charger(FichierHistorique).LastOrDefault();
             HistoriquePerformances.Ajouter(FichierHistorique, analyse);
@@ -104,7 +107,7 @@ public sealed partial class PerformancesPage : Page
         var lancer = Ui.BoutonAccent("Lancer les mesures", "\uE768");
         lancer.Click += BoutonLancer_Click;
         Corps.Children.Add(Ui.Vide("\uEC4A", "Aucune mesure pour l'instant",
-            "Trois mesures rapides (processeur, mémoire, disque), environ 15 secondes. Les résultats sont gardés pour comparer avec les prochaines.", lancer));
+            "Processeur, mémoire, disque, puis carte graphique par l'évaluation officielle de Windows (WinSAT) : 2 à 4 minutes en tout. Les résultats sont gardés pour comparer avec les prochaines.", lancer));
     }
 
     private void Afficher(AnalysePerformance analyse, AnalysePerformance? precedente)

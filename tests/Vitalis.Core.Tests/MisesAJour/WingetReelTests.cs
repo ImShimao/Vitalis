@@ -5,6 +5,7 @@ using Xunit;
 namespace Vitalis.Core.Tests.MisesAJour;
 
 /// <summary>Appel réel de winget sur la machine de test (lecture seule).</summary>
+[Trait("Categorie", "Reel")]
 public class WingetReelTests
 {
     [Fact]

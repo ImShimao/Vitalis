@@ -70,6 +70,12 @@ public sealed partial class ParametresPage : Page
         Corps.Children.Add(Reglage("\uE8A5", "Dossier des journaux", "Un fichier par jour, gardé 14 jours. Utile pour signaler un problème.", journaux));
 
         Corps.Children.Add(Ui.TitreSection("À propos"));
+        var verifier = Ui.Bouton("Rechercher une mise à jour", "\uE895");
+        verifier.Click += async (_, _) => await VerifierVersionAsync(verifier);
+        Corps.Children.Add(Reglage("\uE895", "Mise à jour de Vitalis",
+            "Interroge la page des versions de Vitalis sur GitHub, seulement quand vous cliquez. Rien n'est téléchargé automatiquement.", verifier));
+        Corps.Children.Add(Reglage("\uE8F1", "Composants tiers",
+            "Windows App SDK et .NET (MIT, Microsoft) · CommunityToolkit.Mvvm (MIT) · LibreHardwareMonitorLib (MPL-2.0, non modifiée) · Serilog (Apache-2.0) · System.Management (MIT). Détail : licences-tiers.md.", null));
         Corps.Children.Add(Reglage("\uE9D9", $"{AppInfo.Nom} {AppInfo.Version}",
             "Diagnostic, pilotes et mises à jour du PC. Toutes les données restent sur ce PC : rien n'est envoyé sur Internet. Lancé en administrateur ; rien n'est modifié sans votre confirmation.", null));
     }
@@ -135,6 +141,32 @@ public sealed partial class ParametresPage : Page
         StockagePreferences.Enregistrer(FichierPreferences, StockagePreferences.Charger(FichierPreferences) with { ModeDiagnostic = _diagnostic.IsOn });
         JournalVitalis.Information(_diagnostic.IsOn ? "Mode diagnostic activé." : "Mode diagnostic désactivé.");
         Statut("Enregistré. Redémarrez Vitalis pour appliquer le journal détaillé.");
+    }
+
+    private async Task VerifierVersionAsync(Button bouton)
+    {
+        bouton.IsEnabled = false;
+        try
+        {
+            var v = await MiseAJourVitalis.VerifierAsync();
+            if (v.PlusRecente)
+            {
+                Statut($"Vitalis {v.Version} est disponible (vous avez {AppInfo.Version}). La page de téléchargement s'ouvre.", InfoBarSeverity.Informational);
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(v.Page));
+            }
+            else
+            {
+                Statut($"Vitalis est à jour ({AppInfo.Version}).");
+            }
+        }
+        catch (Exception ex)
+        {
+            Statut($"Vérification impossible : {ex.Message}", InfoBarSeverity.Warning);
+        }
+        finally
+        {
+            bouton.IsEnabled = true;
+        }
     }
 
     private void Planifiee_Toggled(object sender, RoutedEventArgs e)

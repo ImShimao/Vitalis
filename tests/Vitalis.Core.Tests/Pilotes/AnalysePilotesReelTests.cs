@@ -6,6 +6,7 @@ using Xunit;
 namespace Vitalis.Core.Tests.Pilotes;
 
 /// <summary>Lecture réelle de Win32_PnPSignedDriver sur la machine de test (lecture seule).</summary>
+[Trait("Categorie", "Reel")]
 public class AnalysePilotesReelTests
 {
     [Fact]

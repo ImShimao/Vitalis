@@ -16,11 +16,11 @@ Préparer la sortie v0.1.0 : installeur, signature de code, politique de confide
 
 ## Critères d'acceptation
 
-- [ ] Package MSIX et version portable `.exe`
-- [ ] Installeur
+- [x] Version portable `.exe` (MSIX abandonné au profit de l'installeur)
+- [x] Installeur (Inno Setup, `installeur/Vitalis.iss`)
 - [ ] Signature de code avec certificat vérifié
 - [x] Politique de confidentialité publiée (fichier .md)
-- [ ] Vérification de mise à jour de l'application
+- [x] Vérification de mise à jour de l'application (GitHub Releases, à la demande)
 - [x] `08-Releases/v0.1.0.md` rédigé
 
 ## Fichiers de code concernés

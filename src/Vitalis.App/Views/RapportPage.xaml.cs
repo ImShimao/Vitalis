@@ -75,13 +75,25 @@ public sealed partial class RapportPage : Page
         boutonHtml.IsEnabled = boutonPdf.IsEnabled = false;
         string? fichier = null;
         string? erreur = null;
+        var pilotes = EtatAnalyse.Pilotes.Valeur;
         try
         {
             (fichier, erreur) = await Task.Run(() =>
             {
+                IReadOnlyList<Vitalis.Core.SanteLive.ComposantLive>? capteurs = null;
+                try
+                {
+                    using var lecteur = new Vitalis.Core.SanteLive.CapteursLive();
+                    capteurs = lecteur.Lire();
+                }
+                catch (Exception)
+                {
+                    // Capteurs illisibles : le rapport l'indique, sans bloquer l'export.
+                }
+
                 Directory.CreateDirectory(DossierRapports);
                 var nom = Path.Combine(DossierRapports, $"rapport-{DateTime.Now:yyyyMMdd-HHmmss}");
-                File.WriteAllText(nom + ".html", new RapportHtml(Environment.UserName, Environment.MachineName).Generer(analyse), System.Text.Encoding.UTF8);
+                File.WriteAllText(nom + ".html", new RapportHtml(Environment.UserName, Environment.MachineName).Generer(analyse, pilotes?.Installes, pilotes?.Disponibles.Etat == Vitalis.Core.Materiel.Disponibilite.Disponible ? pilotes.Disponibles.Elements : null, capteurs), System.Text.Encoding.UTF8);
                 if (!pdf)
                 {
                     return (nom + ".html", (string?)null);

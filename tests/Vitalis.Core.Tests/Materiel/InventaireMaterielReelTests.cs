@@ -5,6 +5,7 @@ using Xunit;
 namespace Vitalis.Core.Tests.Materiel;
 
 /// <summary>Lecture réelle WMI sur la machine qui exécute les tests. Ne vérifie que ce qui est garanti sous Windows.</summary>
+[Trait("Categorie", "Reel")]
 public class InventaireMaterielReelTests
 {
     [Fact]

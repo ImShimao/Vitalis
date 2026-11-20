@@ -92,7 +92,12 @@ public sealed partial class MainWindow : Window
 
     private void Naviguer(PageDefinition page)
     {
-        var type = page.Cle == "disques" ? typeof(Views.DisquesPage) : typeof(PagePlaceholder);
+        var type = page.Cle switch
+        {
+            "disques" => typeof(Views.DisquesPage),
+            "mises-a-jour" => typeof(Views.MisesAJourPage),
+            _ => typeof(PagePlaceholder),
+        };
         ContenuFrame.Navigate(type, page);
 
         // Page active en gras, pour que l'état soit visible sans couleur seule.

@@ -1,0 +1,44 @@
+<Page
+    x:Class="Vitalis.App.Views.TableauDeBordPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="32">
+        <StackPanel Spacing="16">
+            <TextBlock
+                Text="Tableau de bord"
+                Style="{StaticResource TitleLargeTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexte}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock
+                    x:Name="TexteScore"
+                    Text="Score global : —"
+                    Style="{StaticResource SubtitleTextBlockStyle}"
+                    Foreground="{ThemeResource VitalisTexte}"
+                    VerticalAlignment="Center" />
+                <Button x:Name="BoutonAnalyser" Content="Analyser maintenant" Click="BoutonAnalyser_Click" />
+                <Button x:Name="BoutonAnnuler" Content="Annuler" Click="BoutonAnnuler_Click" Visibility="Collapsed" />
+            </StackPanel>
+
+            <ProgressBar x:Name="Progression" Minimum="0" Maximum="100" Value="0" Visibility="Collapsed" />
+
+            <TextBlock
+                x:Name="TexteDerniereAnalyse"
+                Text="Aucune analyse pour l'instant."
+                Style="{StaticResource BodyTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexteSecondaire}"
+                TextWrapping="Wrap" />
+
+            <TextBlock
+                x:Name="TexteStatut"
+                Style="{StaticResource BodyTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexteSecondaire}"
+                TextWrapping="Wrap" />
+
+            <!-- UniformGrid n'existe pas dans WinUI 3 : les cartes sont empilées. -->
+            <StackPanel x:Name="Cartes" Spacing="12" />
+        </StackPanel>
+    </ScrollViewer>
+
+</Page>

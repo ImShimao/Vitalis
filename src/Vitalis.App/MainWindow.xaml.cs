@@ -39,10 +39,23 @@ public sealed partial class MainWindow : Window
             Racine.Background = (Brush)Application.Current.Resources["VitalisFond"];
         }
 
+        AppliquerTheme(App.Theme);
+
         _pages = new MainViewModel().Pages;
         ConstruireMenu(_pages);
         Racine.KeyDown += Racine_KeyDown;
         Naviguer(_pages[0]);
+    }
+
+    /// <summary>Thème du contenu : « Clair », « Sombre », ou « Systeme » (suit Windows).</summary>
+    public void AppliquerTheme(string theme)
+    {
+        Racine.RequestedTheme = theme switch
+        {
+            "Clair" => ElementTheme.Light,
+            "Sombre" => ElementTheme.Dark,
+            _ => ElementTheme.Default,
+        };
     }
 
     private void ConstruireMenu(IReadOnlyList<PageDefinition> pages)
@@ -100,6 +113,7 @@ public sealed partial class MainWindow : Window
             "pilotes" => typeof(Views.PilotesPage),
             "demarrage" => typeof(Views.DemarragePage),
             "performances" => typeof(Views.PerformancesPage),
+            "parametres" => typeof(Views.ParametresPage),
             _ => typeof(PagePlaceholder),
         };
         ContenuFrame.Navigate(type, page);

@@ -19,6 +19,8 @@
                     VerticalAlignment="Center" />
                 <Button x:Name="BoutonAnalyser" Content="Analyser maintenant" Click="BoutonAnalyser_Click" />
                 <Button x:Name="BoutonAnnuler" Content="Annuler" Click="BoutonAnnuler_Click" Visibility="Collapsed" />
+                <Button x:Name="BoutonExporterHtml" Content="Exporter en HTML" Click="BoutonExporterHtml_Click" IsEnabled="False" />
+                <Button x:Name="BoutonExporterPdf" Content="Exporter en PDF" Click="BoutonExporterPdf_Click" IsEnabled="False" />
             </StackPanel>
 
             <ProgressBar x:Name="Progression" Minimum="0" Maximum="100" Value="0" Visibility="Collapsed" />

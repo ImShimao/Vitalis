@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Media;
 using Vitalis.Core.Disques;
 using Vitalis.Core.Materiel;
 using Vitalis.Core.MisesAJour;
+using Vitalis.Core.Rapport;
 using Vitalis.Core.TableauDeBord;
 
 namespace Vitalis.App.Views;
@@ -67,8 +68,60 @@ public sealed partial class TableauDeBordPage : Page
         TexteStatut.Text = "Annulation demandée…";
     }
 
+    private ResultatTableauDeBord? _dernier;
+
+    private void BoutonExporterHtml_Click(object sender, RoutedEventArgs e)
+    {
+        if (_dernier is null)
+        {
+            return;
+        }
+
+        var html = Chemin("html");
+        try
+        {
+            File.WriteAllText(html, new RapportHtml(Environment.UserName, Environment.MachineName).Generer(_dernier), System.Text.Encoding.UTF8);
+            TexteStatut.Text = $"Rapport HTML enregistré : {html}";
+        }
+        catch (IOException ex)
+        {
+            TexteStatut.Text = $"Export HTML impossible : {ex.Message}";
+        }
+    }
+
+    private void BoutonExporterPdf_Click(object sender, RoutedEventArgs e)
+    {
+        if (_dernier is null)
+        {
+            return;
+        }
+
+        var html = Chemin("html");
+        var pdf = Chemin("pdf");
+        try
+        {
+            File.WriteAllText(html, new RapportHtml(Environment.UserName, Environment.MachineName).Generer(_dernier), System.Text.Encoding.UTF8);
+            var erreur = ExportateurPdf.Exporter(html, pdf);
+            TexteStatut.Text = erreur is null ? $"Rapport PDF enregistré : {pdf}" : erreur;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        {
+            TexteStatut.Text = $"Export PDF impossible : {ex.Message}";
+        }
+    }
+
+    private static string Chemin(string extension)
+    {
+        var dossier = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Vitalis");
+        Directory.CreateDirectory(dossier);
+        return Path.Combine(dossier, $"rapport-{DateTime.Now:yyyyMMdd-HHmm}.{extension}");
+    }
+
     private void AfficherResultat(ResultatTableauDeBord r)
     {
+        _dernier = r;
+        BoutonExporterHtml.IsEnabled = true;
+        BoutonExporterPdf.IsEnabled = true;
         TexteScore.Text = r.Score is null
             ? "Score global : indisponible"
             : $"Score global : {r.Score} / 100";

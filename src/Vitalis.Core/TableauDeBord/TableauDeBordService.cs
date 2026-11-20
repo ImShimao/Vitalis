@@ -11,7 +11,10 @@ public sealed record ResultatTableauDeBord(
     int? Score,
     IReadOnlyList<ComposantScore> Composants,
     IReadOnlyList<CarteSynthese> Cartes,
-    DateTime Date);
+    DateTime Date,
+    RapportMateriel? Materiel = null,
+    RapportDisques? Disques = null,
+    RapportMisesAJour? MisesAJour = null);
 
 /// <summary>
 /// Lance les quatre analyses en parallèle, construit les cartes et le score.
@@ -88,7 +91,7 @@ public sealed class TableauDeBordService
             disques is null ? new ComposantScore("Espace libre", Score.PoidsEspace, null) : Score.Espace(disques.Lecteurs.Elements),
         };
 
-        return new ResultatTableauDeBord(Score.Global(composants), composants, cartes, maintenant);
+        return new ResultatTableauDeBord(Score.Global(composants), composants, cartes, maintenant, materiel, disques, maj);
     }
 
     private static CarteSynthese CarteMateriel(RapportMateriel? r)

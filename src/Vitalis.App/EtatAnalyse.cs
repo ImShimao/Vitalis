@@ -69,6 +69,9 @@ public sealed class Chargeur<T> where T : class
     }
 }
 
+/// <summary>Page Pilotes : pilotes installés, pilotes plus récents du catalogue Windows Update, matériel (carte graphique, carte mère).</summary>
+public sealed record ResultatPilotes(RapportPilotes Installes, Section<ComparaisonPilote> Disponibles, RapportMateriel? Materiel);
+
 /// <summary>Résultats de la session, en mémoire seulement (rien n'est écrit sur le disque).</summary>
 public static class EtatAnalyse
 {
@@ -80,7 +83,7 @@ public static class EtatAnalyse
 
     public static Chargeur<RapportMisesAJour> MisesAJour { get; } = new() { RempliParTableau = true };
 
-    public static Chargeur<RapportPilotes> Pilotes { get; } = new();
+    public static Chargeur<ResultatPilotes> Pilotes { get; } = new();
 
     /// <summary>L'analyse du tableau de bord remplit aussi les pages Matériel, Disques et Mises à jour.</summary>
     public static void Repartir(ResultatTableauDeBord r)

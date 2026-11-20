@@ -28,6 +28,17 @@ public partial class App : Application
         JournalVitalis.Information($"Démarrage de Vitalis {Vitalis.Core.AppInfo.Version}.");
         Theme = prefs.Theme;
 
+        try
+        {
+            // Un clic sur une notification de l'analyse planifiée ouvre simplement Vitalis.
+            Microsoft.Windows.AppNotifications.AppNotificationManager.Default.NotificationInvoked += (_, _) => { };
+            Microsoft.Windows.AppNotifications.AppNotificationManager.Default.Register();
+        }
+        catch (Exception e)
+        {
+            JournalVitalis.Erreur("Inscription aux notifications impossible", e);
+        }
+
         _fenetre = new MainWindow();
         _fenetre.Activate();
     }

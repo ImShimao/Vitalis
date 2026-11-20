@@ -11,12 +11,15 @@ public sealed record Pilote(
     DateTime? Date,
     string? Classe,
     bool Ancien,
-    LienFabricant? Lien);
+    LienFabricant? Lien,
+    bool Generique = false,
+    string? HardwareId = null);
 
 public sealed record RapportPilotes(Section<Pilote> Pilotes, int NombreAnciens);
 
 /// <summary>
-/// Liste des pilotes et règle des deux ans : un pilote daté de plus de deux ans est « ancien » (à vérifier).
+/// Liste des pilotes et règle des deux ans : un pilote de fabricant daté de plus de deux ans est « ancien » (à vérifier).
+/// Les pilotes génériques de Windows (voir <see cref="LiensFabricants.EstGenerique"/>) ne sont jamais « anciens ».
 /// Lecture seule : aucun pilote n'est installé ni téléchargé.
 /// Source : Win32_PnPSignedDriver (root\CIMV2), doc Microsoft vérifiée le 2026-11-20.
 /// </summary>
@@ -36,7 +39,7 @@ public sealed class AnalysePilotes
         try
         {
             var lignes = _source.Requeter(CimV2, "Win32_PnPSignedDriver",
-                ["DeviceName", "Manufacturer", "DriverVersion", "DriverDate", "DeviceClass"]);
+                ["DeviceName", "Manufacturer", "DriverVersion", "DriverDate", "DeviceClass", "HardWareID"]);
 
             var pilotes = lignes
                 .Select(l => Convertir(l, maintenant))
@@ -68,14 +71,18 @@ public sealed class AnalysePilotes
 
         var fabricant = Conversions.Texte(l, "Manufacturer");
         var date = DateDriver(Conversions.Texte(l, "DriverDate"));
+        // Pilote générique Windows : mis à jour par Windows Update, jamais compté « ancien » (ils sont presque tous datés de 2006).
+        var generique = LiensFabricants.EstGenerique(fabricant);
         return new Pilote(
             appareil,
             fabricant,
             Conversions.Texte(l, "DriverVersion"),
             date,
             Conversions.Texte(l, "DeviceClass"),
-            EstAncien(date, maintenant),
-            LiensFabricants.Trouver(fabricant));
+            !generique && EstAncien(date, maintenant),
+            generique ? null : LiensFabricants.Trouver(fabricant),
+            generique,
+            Conversions.Texte(l, "HardWareID"));
     }
 
     /// <summary>Accepte le format CIM (AAAAMMJJ…) et le format « AAAA-MM-JJ HH:MM:SS » renvoyé par certains systèmes.</summary>

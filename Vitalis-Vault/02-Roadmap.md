@@ -20,13 +20,14 @@ Règle : on ne commence pas une étape avant la validation de la précédente.
 | 4 | Windows Update et logiciels (lecture seule) | Validé (par délégation ; winget par CLI, ADR-007) | [[T-005-windows-update-logiciels]] | [[etape-04]] |
 | 5 | Tableau de bord et analyse asynchrone | Validé (formule du score à revoir, ADR-008) | [[T-006-tableau-de-bord]] | [[etape-05]] |
 | 6 | Rapport HTML puis PDF | Fait (PDF non vérifié visuellement, ADR-009) | [[T-007-rapport]] | [[etape-06]] |
-| 7 | Pilotes : liste, règle des 2 ans, liens officiels | Fait (4 liens fabricants vérifiés sur 11) | [[T-008-pilotes]] | |
+| 7 | Pilotes : liste, règle des 2 ans, liens officiels | Fait (30 liens vérifiés, catalogue Windows Update à l'étape 14) | [[T-008-pilotes]] | |
 | 8 | Démarrage : désactivation réversible | Fait (clé Run + sauvegarde, ADR-011) | [[T-009-demarrage]] | |
 | 9 | Performances : benchmarks et historique | Fait (GPU non mesuré) | [[T-010-performances]] | |
-| 10 | Santé live (LibreHardwareMonitor) | Non commencée : décision requise (pilote noyau, licence, Vanguard) | [[T-011-sante-live]] | |
-| 11 | Paramètres et journal d'erreurs | Partiel (thème, journal Serilog ; analyse planifiée et notifications à faire) | [[T-012-parametres-journal]] | |
+| 10 | Santé live (LibreHardwareMonitor) | Fait (ADR-016 ; températures CPU avec PawnIO) | [[T-011-sante-live]] | |
+| 11 | Paramètres et journal d'erreurs | Fait (analyse planifiée et notifications à l'étape 14) | [[T-012-parametres-journal]] | |
 | 12 | Distribution : installeur, signature, politique, changelog | Partiel (changelog, politique, publication portable ; installeur et signature à décider) | [[T-013-distribution]] | |
 | 13 | Refonte de l'interface : styles, menu, chargements, pages Matériel et Rapport | Fait (Windows 10 et thème clair non vérifiés, ADR-013) | | |
+| 14 | Pilotes façon DriversCloud, installation des mises à jour, administrateur, v0.2.0 | Fait (interface non vérifiée visuellement) | | [[v0.2.0]] |
 
 ## Critères de fin par étape
 

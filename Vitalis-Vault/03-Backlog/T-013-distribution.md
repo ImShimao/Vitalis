@@ -2,7 +2,7 @@
 id: T-013
 type: tache
 priorite: P1
-statut: a-faire
+statut: en-cours
 etape: 12
 tags: [distribution, msix, signature, changelog]
 cree: 2026-11-19
@@ -19,9 +19,9 @@ Préparer la sortie v0.1.0 : installeur, signature de code, politique de confide
 - [ ] Package MSIX et version portable `.exe`
 - [ ] Installeur
 - [ ] Signature de code avec certificat vérifié
-- [ ] Politique de confidentialité publiée (fichier .md)
+- [x] Politique de confidentialité publiée (fichier .md)
 - [ ] Vérification de mise à jour de l'application
-- [ ] `08-Releases/v0.1.0.md` rédigé
+- [x] `08-Releases/v0.1.0.md` rédigé
 
 ## Fichiers de code concernés
 

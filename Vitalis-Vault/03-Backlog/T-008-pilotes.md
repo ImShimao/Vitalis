@@ -2,7 +2,7 @@
 id: T-008
 type: tache
 priorite: P1
-statut: a-faire
+statut: fait
 etape: 7
 tags: [pilotes, liens-officiels]
 cree: 2026-11-19
@@ -16,11 +16,11 @@ Lister les pilotes, signaler ceux de plus de 2 ans, et proposer les liens offici
 
 ## Critères d'acceptation
 
-- [ ] Liste des pilotes avec date et version
-- [ ] Règle des 2 ans appliquée et expliquée
-- [ ] Table des URL par fabricant, chacune vérifiée
-- [ ] Date de vérification notée pour chaque URL
-- [ ] `04-Fonctions/pilotes.md` créé
+- [x] Liste des pilotes avec date et version
+- [x] Règle des 2 ans appliquée et expliquée
+- [x] Table des URL par fabricant, chacune vérifiée
+- [x] Date de vérification notée pour chaque URL
+- [x] `04-Fonctions/pilotes.md` créé
 
 ## Fichiers de code concernés
 

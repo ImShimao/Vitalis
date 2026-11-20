@@ -52,3 +52,7 @@ Liste les logiciels pour lesquels winget signale une version plus récente : nom
 - Réel (`WingetReelTests`) : appel réel sur la machine de test. Résultat : 30 mises à jour listées.
 
 Liens : [[windows-update]], [[ADR-007-winget-cli]].
+
+## Mise à jour des logiciels (étape 14)
+
+Vitalis installe maintenant les mises à jour, **après confirmation** : bouton « Mettre à jour » par logiciel et « Tout mettre à jour » (un par un). Commande : `winget upgrade --id "<id>" --exact --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity`. L'identifiant est revalidé (`^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$`) avant d'être placé sur la ligne de commande. Codes interprétés (doc winget returnCodes.md) : 0 réussi, 0x8A150109 / 0x8A15010B redémarrage pour terminer, 0x8A15010A redémarrer puis réessayer, 0x8A15002B plus de mise à jour applicable. Tests : `InstallateurWingetTests`.

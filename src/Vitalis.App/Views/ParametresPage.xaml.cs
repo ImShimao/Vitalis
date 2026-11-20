@@ -12,6 +12,8 @@ public sealed partial class ParametresPage : Page
 {
     private readonly ComboBox _theme = new() { MinWidth = 200 };
     private readonly ToggleSwitch _diagnostic = new() { OnContent = "Activé", OffContent = "Désactivé" };
+    private readonly ToggleSwitch _planifiee = new() { OnContent = "Chaque lundi", OffContent = "Désactivée" };
+    private readonly ToggleSwitch _notifications = new() { OnContent = "Activées", OffContent = "Désactivées" };
     private readonly InfoBar _statut = new() { IsClosable = true, IsOpen = false, Severity = InfoBarSeverity.Success };
     private bool _chargement;
 
@@ -27,6 +29,10 @@ public sealed partial class ParametresPage : Page
 
         _theme.SelectionChanged += Theme_SelectionChanged;
         _diagnostic.Toggled += Diagnostic_Toggled;
+        _planifiee.Toggled += Planifiee_Toggled;
+        _notifications.Toggled += Notifications_Toggled;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_planifiee, "Analyse planifiée");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_notifications, "Notifications");
         Construire();
         Loaded += (_, _) => Charger();
     }
@@ -43,6 +49,18 @@ public sealed partial class ParametresPage : Page
         Corps.Children.Add(Ui.TitreSection("Apparence"));
         Corps.Children.Add(Reglage("\uE790", "Thème", "Clair, sombre, ou identique à Windows.", _theme));
 
+        Corps.Children.Add(Ui.TitreSection("Analyse automatique"));
+        Corps.Children.Add(Reglage("", "Analyse planifiée",
+            "Chaque lundi à 12 h (ou au prochain démarrage si le PC était éteint), Vitalis analyse le PC sans ouvrir de fenêtre. " +
+            "La tâche est créée dans le Planificateur de tâches avec les droits administrateur, nécessaires à la lecture SMART et à Windows Update. Elle ne modifie rien.", _planifiee));
+        var tester = Ui.Bouton("Tester", "");
+        tester.Click += (_, _) => Program.Notifier("Vitalis", "Les notifications fonctionnent.");
+        var notif = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        notif.Children.Add(tester);
+        notif.Children.Add(_notifications);
+        Corps.Children.Add(Reglage("", "Notifications",
+            "Après une analyse planifiée : score, mises à jour Windows, logiciels et pilotes à mettre à jour.", notif));
+
         Corps.Children.Add(Ui.TitreSection("Diagnostic"));
         Corps.Children.Add(Reglage("\uEBE8", "Mode diagnostic",
             "Journal détaillé, au prochain démarrage. Il ne contient ni nom d'utilisateur, ni nom de PC, ni numéro de série.", _diagnostic));
@@ -53,7 +71,7 @@ public sealed partial class ParametresPage : Page
 
         Corps.Children.Add(Ui.TitreSection("À propos"));
         Corps.Children.Add(Reglage("\uE9D9", $"{AppInfo.Nom} {AppInfo.Version}",
-            "Diagnostic du PC en lecture seule. Toutes les données restent sur ce PC : rien n'est envoyé sur Internet.", null));
+            "Diagnostic, pilotes et mises à jour du PC. Toutes les données restent sur ce PC : rien n'est envoyé sur Internet. Lancé en administrateur ; rien n'est modifié sans votre confirmation.", null));
     }
 
     /// <summary>Ligne de réglage façon Paramètres Windows : icône, titre, explication, contrôle à droite.</summary>
@@ -90,6 +108,8 @@ public sealed partial class ParametresPage : Page
         var p = StockagePreferences.Charger(FichierPreferences);
         _theme.SelectedItem = _theme.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag as string == p.Theme) ?? _theme.Items[0];
         _diagnostic.IsOn = p.ModeDiagnostic;
+        _notifications.IsOn = p.NotificationsActives;
+        _planifiee.IsOn = AnalysePlanifiee.Existe();
         _chargement = false;
     }
 
@@ -117,8 +137,52 @@ public sealed partial class ParametresPage : Page
         Statut("Enregistré. Redémarrez Vitalis pour appliquer le journal détaillé.");
     }
 
-    private void Statut(string message)
+    private void Planifiee_Toggled(object sender, RoutedEventArgs e)
     {
+        if (_chargement)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_planifiee.IsOn)
+            {
+                AnalysePlanifiee.Creer(Environment.ProcessPath!);
+                Statut("Analyse planifiée créée : chaque lundi à 12 h.");
+            }
+            else
+            {
+                AnalysePlanifiee.Supprimer();
+                Statut("Analyse planifiée supprimée.");
+            }
+
+            JournalVitalis.Information(_planifiee.IsOn ? "Analyse planifiée créée." : "Analyse planifiée supprimée.");
+        }
+        catch (Exception ex)
+        {
+            JournalVitalis.Erreur("Planificateur de tâches", ex);
+            _chargement = true;
+            _planifiee.IsOn = AnalysePlanifiee.Existe();
+            _chargement = false;
+            Statut($"Planificateur de tâches : {ex.Message}", InfoBarSeverity.Error);
+        }
+    }
+
+    private void Notifications_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_chargement)
+        {
+            return;
+        }
+
+        StockagePreferences.Enregistrer(FichierPreferences, StockagePreferences.Charger(FichierPreferences) with { NotificationsActives = _notifications.IsOn });
+        Statut(_notifications.IsOn ? "Notifications activées." : "Notifications désactivées.");
+    }
+
+    private void Statut(string message, InfoBarSeverity gravite = InfoBarSeverity.Success)
+    {
+        _statut.Severity = gravite;
         _statut.Title = message;
         _statut.IsOpen = true;
     }

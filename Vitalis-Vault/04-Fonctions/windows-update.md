@@ -50,3 +50,7 @@ La page ne propose pas encore de lien vers les paramètres Windows Update : le l
 - Réels (`WuaReelTests`) : historique lu sur la machine de test ; rapport sans exception non gérée. Résultat sur la machine de test : 4 mises en attente (1 logiciel, 3 pilotes).
 
 Liens : [[ADR-006-windows-update-com]], [[logiciels-winget]].
+
+## Installation (étape 14)
+
+Bouton « Installer les mises à jour Windows » (confirmation) : recherche, téléchargement puis installation par Windows Update Agent (`CreateUpdateDownloader`, `CreateUpdateInstaller`), contrats acceptés au nom de l'utilisateur (dit dans la confirmation). Les mises à jour qui demandent une action (`CanRequestUserInput`) sont laissées à Windows Update. Redémarrage proposé si nécessaire, jamais forcé. Bouton « Ouvrir Windows Update » (`ms-settings:windowsupdate`). Code : `InstallateurWindowsUpdate.cs`.

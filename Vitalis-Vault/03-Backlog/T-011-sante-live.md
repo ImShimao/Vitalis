@@ -2,7 +2,7 @@
 id: T-011
 type: tache
 priorite: P2
-statut: a-faire
+statut: fait
 etape: 10
 tags: [temperatures, librehardwaremonitor, risque]
 cree: 2026-11-19
@@ -16,10 +16,10 @@ Afficher températures et fréquences en temps réel avec LibreHardwareMonitor. 
 
 ## Critères d'acceptation
 
-- [ ] Décision de dépendance (LibreHardwareMonitor, licence MPL-2.0) validée par écrit avec l'utilisateur
-- [ ] Risques pilote noyau, antivirus et Vanguard documentés dans `04-Fonctions/sante-live.md`
-- [ ] Mode dégradé si le pilote est bloqué
-- [ ] Test : capteur absent affiche « indisponible »
+- [x] Décision de dépendance (LibreHardwareMonitor, licence MPL-2.0) validée par écrit avec l'utilisateur
+- [x] Risques pilote noyau, antivirus et Vanguard documentés dans `04-Fonctions/sante-live.md`
+- [x] Mode dégradé si le pilote est bloqué
+- [x] Test : capteur absent affiche « indisponible »
 
 ## Fichiers de code concernés
 

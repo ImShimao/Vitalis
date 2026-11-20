@@ -65,7 +65,7 @@ public class AnalysePilotesTests
     [Fact]
     public void FabricantNonVerifie_LienSansUrl()
     {
-        var lien = LiensFabricants.Trouver("MSI");
+        var lien = LiensFabricants.Trouver("Kingston");
 
         lien.Should().NotBeNull();
         lien!.EstVerifie.Should().BeFalse();
@@ -75,7 +75,7 @@ public class AnalysePilotesTests
     [Fact]
     public void FabricantVerifie_UrlHttps()
     {
-        foreach (var nom in new[] { "NVIDIA", "Intel", "Realtek", "ASUS" })
+        foreach (var nom in new[] { "NVIDIA", "Intel", "Realtek", "ASUS", "AMD", "Micro-Star INT'L CO., LTD.", "Gigabyte", "Dell", "Lenovo", "HP", "Acer" })
         {
             var lien = LiensFabricants.Trouver(nom);
             lien!.EstVerifie.Should().BeTrue(nom);

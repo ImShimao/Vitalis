@@ -199,6 +199,7 @@ public sealed partial class MainWindow : Window
             "demarrage" => typeof(DemarragePage),
             "performances" => typeof(PerformancesPage),
             "rapport" => typeof(RapportPage),
+            "sante-live" => typeof(SanteLivePage),
             "parametres" => typeof(ParametresPage),
             _ => typeof(PagePlaceholder),
         };

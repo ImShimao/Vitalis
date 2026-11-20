@@ -1,13 +1,14 @@
-﻿# Politique de confidentialité de Vitalis
+# Politique de confidentialité de Vitalis
 
-Date : 20 novembre 2026. Version 0.1.0.
+Date : 20 novembre 2026. Version 0.2.0.
 
 ## Ce que Vitalis fait avec vos données
 
 Vitalis lit des informations sur votre PC pour l'afficher. Il ne les envoie à aucun serveur : **Vitalis ne se connecte à aucun service distant** pour analyser votre machine. Les seules connexions réseau sont :
 
 - l'ouverture d'un lien vers le site officiel d'un fabricant, à votre demande, dans votre navigateur ;
-- la recherche de mises à jour Windows et la liste des logiciels winget, faites par Windows et winget eux-mêmes.
+- la recherche et, à votre demande, l'installation des mises à jour Windows et des pilotes, faites par Windows Update ;
+- la liste et, à votre demande, la mise à jour des logiciels, faites par winget depuis sa source officielle (Microsoft).
 
 ## Données lues
 
@@ -27,7 +28,15 @@ Dans `%LOCALAPPDATA%\Vitalis` : préférences, date de la dernière analyse, his
 
 ## Droits d'administrateur
 
-Vitalis ne demande jamais l'élévation au lancement. La relance en administrateur n'a lieu qu'après votre clic et la confirmation de Windows (UAC), pour lire les compteurs SMART des disques. Vitalis ne modifie rien sur le disque.
+Vitalis se lance en administrateur (confirmation de Windows, UAC, à chaque lancement) : c'est nécessaire pour lire les compteurs SMART et les capteurs, et pour installer les mises à jour. **Rien n'est installé ni modifié sans votre confirmation** dans une boîte de dialogue.
+
+## Capteurs (santé live)
+
+Les températures du processeur passent par PawnIO, un pilote signé installé à part. Vitalis ne l'installe que si vous cliquez sur « Installer PawnIO » et confirmez. Il se désinstalle depuis Paramètres › Applications.
+
+## Analyse planifiée
+
+Si vous l'activez, une tâche « Vitalis - analyse hebdomadaire » est créée dans le Planificateur de tâches. Elle lit l'état du PC et affiche une notification ; elle n'installe rien. La désactiver supprime la tâche.
 
 ## Démarrage des programmes
 

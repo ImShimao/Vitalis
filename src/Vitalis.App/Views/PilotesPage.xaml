@@ -13,7 +13,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel Spacing="4">
                 <TextBlock x:Name="TitrePage" Text="Pilotes" Style="{StaticResource VitalisTitrePage}" />
-                <TextBlock x:Name="TexteResume" Text="Un pilote daté de plus de deux ans est signalé « ancien ». Vitalis ne télécharge ni n'installe aucun pilote." Style="{StaticResource VitalisDescription}" />
+                <TextBlock x:Name="TexteResume" Text="Chaque pilote comparé au catalogue officiel Windows Update, et liens directs vers les pages pilotes des fabricants. Rien n'est installé sans votre confirmation." Style="{StaticResource VitalisDescription}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
                 <Button x:Name="BoutonActualiser" Click="BoutonActualiser_Click" AutomationProperties.Name="Actualiser">

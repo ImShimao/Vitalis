@@ -16,6 +16,6 @@ public class AppInfoTests
     public void Version_EstAuFormatSemver()
     {
         Version.TryParse(AppInfo.Version, out _).Should().BeTrue();
-        AppInfo.Version.Should().Be("0.1.0");
+        AppInfo.Version.Should().Be("0.2.0");
     }
 }

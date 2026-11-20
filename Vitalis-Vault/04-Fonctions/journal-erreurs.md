@@ -2,7 +2,7 @@
 id: F-journal-erreurs
 type: fonction
 priorite: P2
-statut: partiel
+statut: fait
 etape: 11
 tags: [fonction, journal, logs, diagnostic]
 cree: 2026-11-20

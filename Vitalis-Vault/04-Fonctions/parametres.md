@@ -2,7 +2,7 @@
 id: F-parametres
 type: fonction
 priorite: P1
-statut: partiel
+statut: fait
 etape: 11
 tags: [fonction, parametres, journal, theme]
 cree: 2026-11-20
@@ -39,3 +39,9 @@ Thème (suivre Windows, clair, sombre), mode diagnostic, accès au dossier des j
 - Réel : démarrage de l'application, page Paramètres ouverte, journal écrit sans nom d'utilisateur.
 
 Liens : [[journal-erreurs]], [[ADR-012-serilog]].
+
+## Analyse planifiée et notifications (étape 14)
+
+- Interrupteur « Analyse planifiée » : crée ou supprime la tâche « Vitalis - analyse hebdomadaire » (API COM Schedule.Service) : chaque lundi 12 h, rattrapée si le PC était éteint, autorisations maximales (nécessaire, voir [[ADR-015-toujours-administrateur]]), 30 minutes maximum. Elle lance `Vitalis.exe --analyse-planifiee` : analyse sans fenêtre, en lecture seule.
+- Interrupteur « Notifications » (préférence `NotificationsActives`) et bouton « Tester ». Notification Windows App SDK (`AppNotificationManager`) : score, mises à jour Windows, logiciels, pilotes. Aucune donnée personnelle.
+- Tests : `AnalysePlanifieeTests` (texte de la notification, prochain lundi).

@@ -13,7 +13,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel Spacing="4">
                 <TextBlock x:Name="TitrePage" Text="Mises à jour" Style="{StaticResource VitalisTitrePage}" />
-                <TextBlock x:Name="TexteResume" Text="Mises à jour Windows et logiciels en attente. Vitalis n'installe rien." Style="{StaticResource VitalisDescription}" />
+                <TextBlock x:Name="TexteResume" Text="Mises à jour Windows et logiciels en attente. Rien n'est installé sans votre confirmation." Style="{StaticResource VitalisDescription}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
                 <Button x:Name="BoutonActualiser" Click="BoutonActualiser_Click" AutomationProperties.Name="Rechercher">

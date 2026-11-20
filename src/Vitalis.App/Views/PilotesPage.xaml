@@ -1,0 +1,27 @@
+<Page
+    x:Class="Vitalis.App.Views.PilotesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="32">
+        <StackPanel Spacing="16">
+            <TextBlock
+                Text="Pilotes"
+                Style="{StaticResource TitleLargeTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexte}" />
+            <TextBlock
+                x:Name="TexteResume"
+                Text="Lecture des pilotes…"
+                Style="{StaticResource BodyTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexteSecondaire}"
+                TextWrapping="Wrap" />
+            <TextBlock
+                Text="Règle : un pilote daté de plus de deux ans est signalé « ancien ». Vitalis ne télécharge ni n'installe aucun pilote : les liens mènent aux pages officielles du fabricant."
+                Style="{StaticResource BodyTextBlockStyle}"
+                Foreground="{ThemeResource VitalisTexteSecondaire}"
+                TextWrapping="Wrap" />
+            <StackPanel x:Name="ListePilotes" Spacing="10" />
+        </StackPanel>
+    </ScrollViewer>
+
+</Page>

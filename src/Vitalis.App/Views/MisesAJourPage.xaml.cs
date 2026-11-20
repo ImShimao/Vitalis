@@ -29,7 +29,7 @@ public sealed partial class MisesAJourPage : Page
 
         try
         {
-            var rapport = await new AnalyseMisesAJour(new WuaCom()).AnalyserAsync(_annulation.Token);
+            var rapport = await new AnalyseMisesAJour(new WuaCom(), new WingetCli()).AnalyserAsync(_annulation.Token);
             Afficher(rapport);
         }
         catch (OperationCanceledException)
@@ -49,8 +49,27 @@ public sealed partial class MisesAJourPage : Page
             ? d.ToString("d MMMM yyyy", CultureInfo.CurrentCulture)
             : "inconnue";
 
-        TexteResume.Text = $"{nombre} mise(s) à jour en attente · dernière installation réussie : {date}."
+        TexteResume.Text = $"{nombre} mise(s) à jour Windows en attente · {rapport.Logiciels.Elements.Count} logiciel(s) à mettre à jour · " +
+            $"dernière installation Windows réussie : {date}."
             + (rapport.RaisonHistorique is null ? string.Empty : $" {rapport.RaisonHistorique}");
+
+        ListeLogiciels.Children.Clear();
+        if (rapport.Logiciels.Etat == Disponibilite.Indisponible)
+        {
+            ListeLogiciels.Children.Add(Texte(rapport.Logiciels.Raison ?? "winget indisponible.", secondaire: true));
+        }
+        else
+        {
+            if (rapport.Logiciels.Elements.Count == 0)
+            {
+                ListeLogiciels.Children.Add(Texte(rapport.Logiciels.Raison ?? "Aucune mise à jour de logiciel.", secondaire: true));
+            }
+
+            foreach (var l in rapport.Logiciels.Elements)
+            {
+                ListeLogiciels.Children.Add(Texte($"{l.Nom} · {l.Id} · {l.VersionActuelle} → {l.VersionDisponible}", secondaire: false));
+            }
+        }
 
         if (rapport.EnAttente.Etat == Disponibilite.Indisponible)
         {

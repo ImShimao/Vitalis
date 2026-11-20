@@ -16,4 +16,5 @@ public sealed record EntreeHistorique(DateTime? Date, string? Titre, bool Reussi
 public sealed record RapportMisesAJour(
     Section<MiseAJour> EnAttente,
     DateTime? DerniereInstallationReussie,
-    string? RaisonHistorique);
+    string? RaisonHistorique,
+    Section<MiseAJourLogiciel> Logiciels);

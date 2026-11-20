@@ -20,7 +20,7 @@ public class WuaReelTests
     [Fact]
     public async Task MachineReelle_RapportMisesAJourSansExceptionNonGeree()
     {
-        var rapport = await new AnalyseMisesAJour(new WuaCom()).AnalyserAsync();
+        var rapport = await new AnalyseMisesAJour(new WuaCom(), new WingetCli()).AnalyserAsync();
 
         rapport.EnAttente.Etat.Should().NotBe(Disponibilite.Partielle);
         rapport.EnAttente.Raison.Should().NotContain("Exception");

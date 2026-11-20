@@ -12,10 +12,12 @@ public sealed class AnalyseMisesAJour
     public const int NombreHistorique = 100;
 
     private readonly IServiceWua _wua;
+    private readonly IServiceWinget _winget;
 
-    public AnalyseMisesAJour(IServiceWua wua)
+    public AnalyseMisesAJour(IServiceWua wua, IServiceWinget winget)
     {
         _wua = wua;
+        _winget = winget;
     }
 
     public async Task<RapportMisesAJour> AnalyserAsync(CancellationToken ct = default)
@@ -24,14 +26,32 @@ public sealed class AnalyseMisesAJour
 
         var enAttente = Task.Run(() => LireEnAttente(), ct);
         var historique = Task.Run(() => LireHistorique(), ct);
+        var logiciels = Task.Run(() => LireLogiciels(), ct);
 
-        await Task.WhenAll(enAttente, historique).ConfigureAwait(false);
+        await Task.WhenAll(enAttente, historique, logiciels).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
 
         return new RapportMisesAJour(
             enAttente.Result,
             historique.Result.Date,
-            historique.Result.Raison);
+            historique.Result.Raison,
+            logiciels.Result);
+    }
+
+    private Section<MiseAJourLogiciel> LireLogiciels()
+    {
+        try
+        {
+            var elements = _winget.RechercherMisesAJour();
+            return elements.Count == 0
+                ? new Section<MiseAJourLogiciel>(Disponibilite.Disponible, [], "Aucune mise à jour de logiciel signalée par winget.")
+                : new Section<MiseAJourLogiciel>(Disponibilite.Disponible, elements);
+        }
+        catch (Exception e)
+        {
+            return new Section<MiseAJourLogiciel>(Disponibilite.Indisponible, [],
+                $"winget indisponible ({e.GetType().Name} : {Nettoyer(e)}). Vérifiez que winget est installé.");
+        }
     }
 
     private Section<MiseAJour> LireEnAttente()

@@ -24,11 +24,7 @@
                 Text="Logiciels (winget)"
                 Style="{StaticResource SubtitleTextBlockStyle}"
                 Foreground="{ThemeResource VitalisTexte}" />
-            <TextBlock
-                Text="Non disponible pour l'instant : l'API COM de WinGet n'a pas pu être vérifiée dans la documentation Microsoft. Aucune mise à jour de logiciel n'est lue ni installée."
-                Style="{StaticResource BodyTextBlockStyle}"
-                Foreground="{ThemeResource VitalisTexteSecondaire}"
-                TextWrapping="Wrap" />
+            <StackPanel x:Name="ListeLogiciels" Spacing="8" />
         </StackPanel>
     </ScrollViewer>
 

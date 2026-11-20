@@ -16,6 +16,11 @@ public class AnalyseMisesAJourTests
         public IReadOnlyList<EntreeHistorique> Historique(int nombreMax) => FonctionHistorique?.Invoke() ?? [];
     }
 
+    private sealed class FauxWinget : IServiceWinget
+    {
+        public IReadOnlyList<MiseAJourLogiciel> RechercherMisesAJour() => [];
+    }
+
     private static MiseAJour Mise(string titre, bool pilote = false) =>
         new(titre, ["KB5040000"], "Important", false, pilote);
 
@@ -27,7 +32,7 @@ public class AnalyseMisesAJourTests
             FonctionRecherche = () => [Mise("Mise à jour cumulative"), Mise("Pilote GPU", pilote: true)],
         };
 
-        var rapport = await new AnalyseMisesAJour(wua).AnalyserAsync();
+        var rapport = await new AnalyseMisesAJour(wua, new FauxWinget()).AnalyserAsync();
 
         rapport.EnAttente.Etat.Should().Be(Disponibilite.Disponible);
         rapport.EnAttente.Elements.Should().HaveCount(2);
@@ -38,7 +43,7 @@ public class AnalyseMisesAJourTests
     [Fact]
     public async Task AucuneMiseAJour_EtatDisponibleAvecMessage()
     {
-        var rapport = await new AnalyseMisesAJour(new FauxWua()).AnalyserAsync();
+        var rapport = await new AnalyseMisesAJour(new FauxWua(), new FauxWinget()).AnalyserAsync();
 
         rapport.EnAttente.Etat.Should().Be(Disponibilite.Disponible);
         rapport.EnAttente.Elements.Should().BeEmpty();
@@ -54,7 +59,7 @@ public class AnalyseMisesAJourTests
             FonctionHistorique = () => [new EntreeHistorique(new DateTime(2026, 10, 14), "Cumulative", true)],
         };
 
-        var rapport = await new AnalyseMisesAJour(wua).AnalyserAsync();
+        var rapport = await new AnalyseMisesAJour(wua, new FauxWinget()).AnalyserAsync();
 
         rapport.EnAttente.Etat.Should().Be(Disponibilite.Indisponible);
         rapport.EnAttente.Raison.Should().Contain("Service arrêté");
@@ -74,7 +79,7 @@ public class AnalyseMisesAJourTests
             ],
         };
 
-        var rapport = await new AnalyseMisesAJour(wua).AnalyserAsync();
+        var rapport = await new AnalyseMisesAJour(wua, new FauxWinget()).AnalyserAsync();
 
         rapport.DerniereInstallationReussie.Should().Be(new DateTime(2026, 10, 14));
         rapport.RaisonHistorique.Should().BeNull();
@@ -83,7 +88,7 @@ public class AnalyseMisesAJourTests
     [Fact]
     public async Task HistoriqueVide_PasDeDateEtRaison()
     {
-        var rapport = await new AnalyseMisesAJour(new FauxWua()).AnalyserAsync();
+        var rapport = await new AnalyseMisesAJour(new FauxWua(), new FauxWinget()).AnalyserAsync();
 
         rapport.DerniereInstallationReussie.Should().BeNull();
         rapport.RaisonHistorique.Should().Contain("Aucune installation");
@@ -95,7 +100,7 @@ public class AnalyseMisesAJourTests
         var annulation = new CancellationTokenSource();
         annulation.Cancel();
 
-        var action = () => new AnalyseMisesAJour(new FauxWua()).AnalyserAsync(annulation.Token);
+        var action = () => new AnalyseMisesAJour(new FauxWua(), new FauxWinget()).AnalyserAsync(annulation.Token);
 
         await action.Should().ThrowAsync<OperationCanceledException>();
     }

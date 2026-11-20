@@ -25,10 +25,18 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         Title = AppInfo.Nom;
 
+        // La barre de titre suit le mode du système, comme le contenu (sinon elle reste claire en mode sombre).
+        AppWindow.TitleBar.PreferredTheme = Microsoft.UI.Windowing.TitleBarTheme.UseDefaultAppMode;
+
         // Mica seulement sur Windows 11 ; sur Windows 10 la fenêtre garde le fond du thème.
         if (MicaController.IsSupported())
         {
             SystemBackdrop = new MicaBackdrop();
+        }
+        else
+        {
+            // Sans Mica, le contenu prend la couleur de fond de la palette (sinon il serait noir en mode sombre).
+            Racine.Background = (Brush)Application.Current.Resources["VitalisFond"];
         }
 
         _pages = new MainViewModel().Pages;

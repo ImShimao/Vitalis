@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{CB02AB62
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vitalis.Core.Tests", "tests\Vitalis.Core.Tests\Vitalis.Core.Tests.csproj", "{D50CE8B4-2CF0-4071-883F-20063A25F5B5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vitalis.App", "src\Vitalis.App\Vitalis.App.csproj", "{9921C4E3-7556-4993-8077-2D6768192BED}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +30,14 @@ Global
 		{D50CE8B4-2CF0-4071-883F-20063A25F5B5}.Debug|Any CPU.Build.0 = Debug|x64
 		{D50CE8B4-2CF0-4071-883F-20063A25F5B5}.Release|Any CPU.ActiveCfg = Release|x64
 		{D50CE8B4-2CF0-4071-883F-20063A25F5B5}.Release|Any CPU.Build.0 = Release|x64
+		{9921C4E3-7556-4993-8077-2D6768192BED}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{9921C4E3-7556-4993-8077-2D6768192BED}.Debug|Any CPU.Build.0 = Debug|x64
+		{9921C4E3-7556-4993-8077-2D6768192BED}.Release|Any CPU.ActiveCfg = Release|x64
+		{9921C4E3-7556-4993-8077-2D6768192BED}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{DE0E8BE1-9CE8-41C5-8E72-09AEA2D8169F} = {77FB4311-E35D-438A-933E-3459FBCE514C}
 		{D50CE8B4-2CF0-4071-883F-20063A25F5B5} = {CB02AB62-47B2-43BA-A1E0-F216A359ACCB}
+		{9921C4E3-7556-4993-8077-2D6768192BED} = {77FB4311-E35D-438A-933E-3459FBCE514C}
 	EndGlobalSection
 EndGlobal

@@ -482,3 +482,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Config Obsidian (le coffre est hors dépôt)
+.obsidian/
+!src/Vitalis.App/

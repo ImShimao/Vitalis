@@ -1,0 +1,9 @@
+<Page
+    x:Class="Vitalis.App.Views.PagePlaceholder"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Margin="32" Spacing="12">
+        <TextBlock x:Name="TitrePage" Style="{StaticResource TitleLargeTextBlockStyle}" Foreground="{ThemeResource VitalisTexte}" />
+        <TextBlock x:Name="TexteEtape" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource VitalisTexteSecondaire}" TextWrapping="Wrap" />
+    </StackPanel>
+</Page>

@@ -32,7 +32,9 @@ public sealed partial class DisquesPage : Page
 
         try
         {
-            var rapport = await new AnalyseDisques(new Core.Materiel.WmiSource()).AnalyserAsync(_annulation.Token);
+            // Diagnostic : seulement en administrateur (les compteurs SMART ne sont lisibles qu'alors).
+            Action<string>? journal = Droits.EstAdministrateur() ? EcrireDiagnostic : null;
+            var rapport = await new AnalyseDisques(new WmiSource(), journal).AnalyserAsync(_annulation.Token);
             Afficher(rapport);
         }
         catch (OperationCanceledException)
@@ -42,6 +44,25 @@ public sealed partial class DisquesPage : Page
         catch (Exception e)
         {
             TexteStatut.Text = $"Analyse impossible : {e.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Ajoute une ligne au fichier %LOCALAPPDATA%\Vitalis\diagnostic-smart.txt.
+    /// Contient des identifiants internes de disque (DeviceId, GUID) et les noms de modèle ; aucun numéro de série.
+    /// </summary>
+    private static void EcrireDiagnostic(string ligne)
+    {
+        try
+        {
+            var dossier = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Vitalis");
+            Directory.CreateDirectory(dossier);
+            File.AppendAllText(Path.Combine(dossier, "diagnostic-smart.txt"),
+                $"{DateTime.Now:HH:mm:ss} {ligne}{Environment.NewLine}");
+        }
+        catch (IOException)
+        {
+            // Le diagnostic ne doit jamais bloquer l'affichage.
         }
     }
 

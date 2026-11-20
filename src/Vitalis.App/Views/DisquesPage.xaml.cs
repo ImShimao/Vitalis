@@ -73,7 +73,7 @@ public sealed partial class DisquesPage : Page
 
         TexteStatut.Text = rapport.SmartComplet
             ? "Compteurs SMART lus pour tous les disques."
-            : $"{(rapport.RaisonSmart ?? "Compteurs SMART incomplets.")} {(bouton ? "" : "Vitalis est déjà en administrateur.")}".Trim();
+            : rapport.RaisonSmart ?? "Compteurs SMART incomplets.";
 
         AfficherSection(rapport.Disques, ListeDisques, "Aucun disque lisible", d => new[]
         {

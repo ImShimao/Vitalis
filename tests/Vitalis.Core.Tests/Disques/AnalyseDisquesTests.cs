@@ -59,6 +59,20 @@ public class AnalyseDisquesTests
     }
 
     [Fact]
+    public async Task AucunCompteurRenvoye_LeMessageNeParlePasDeJointure()
+    {
+        // Cas réel observé en administrateur : Windows ne renvoie aucun compteur.
+        var source = DisquesComplets().Avec("MSFT_StorageReliabilityCounter");
+
+        var rapport = await new AnalyseDisques(source).AnalyserAsync();
+
+        rapport.SmartComplet.Should().BeFalse();
+        rapport.RaisonSmart.Should().Contain("aucun compteur de fiabilité");
+        rapport.RaisonSmart.Should().NotContain("correspondant");
+        rapport.Disques.Elements.Should().OnlyContain(d => d.TemperatureC == null);
+    }
+
+    [Fact]
     public async Task CompteurSansDisqueCorrespondant_SmartPartiel_SansInventer()
     {
         var source = DisquesComplets()

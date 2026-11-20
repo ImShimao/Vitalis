@@ -107,6 +107,12 @@ public sealed class AnalyseDisques
         }
 
         _journal?.Invoke($"MSFT_StorageReliabilityCounter : {compteurs.Count} compteur(s)");
+        if (compteurs.Count == 0)
+        {
+            // Cas réel observé : Windows ne renvoie aucun compteur, même en administrateur. Ce n'est pas une erreur de jointure.
+            return new LectureDisques(section, SmartComplet: false,
+                RaisonSmart: "Windows ne fournit aucun compteur de fiabilité pour ces disques (pilote ou matériel non compatible).");
+        }
         foreach (var c in compteurs)
         {
             _journal?.Invoke($"  compteur DeviceId={Texte(c, "DeviceId") ?? "absent"} GUID={DernierGuid(Texte(c, "ObjectId")) ?? "absent"} temp={Texte(c, "Temperature") ?? "absente"}");

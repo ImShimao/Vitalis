@@ -5,17 +5,20 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Input;
 using Vitalis.App.ViewModels;
 using Vitalis.App.Views;
 using Vitalis.Core;
 using Vitalis.Core.Navigation;
 using Windows.System;
+using Windows.UI.Core;
 
 namespace Vitalis.App;
 
 public sealed partial class MainWindow : Window
 {
     private readonly Dictionary<string, Button> _boutons = new();
+    private IReadOnlyList<PageDefinition> _pages = [];
 
     public MainWindow()
     {
@@ -28,9 +31,10 @@ public sealed partial class MainWindow : Window
             SystemBackdrop = new MicaBackdrop();
         }
 
-        var pages = new MainViewModel().Pages;
-        ConstruireMenu(pages);
-        Naviguer(pages[0]);
+        _pages = new MainViewModel().Pages;
+        ConstruireMenu(_pages);
+        Racine.KeyDown += Racine_KeyDown;
+        Naviguer(_pages[0]);
     }
 
     private void ConstruireMenu(IReadOnlyList<PageDefinition> pages)
@@ -45,18 +49,37 @@ public sealed partial class MainWindow : Window
                 HorizontalContentAlignment = HorizontalAlignment.Left,
             };
 
-            // Ctrl+1 à Ctrl+9 pour les neuf premières pages, Ctrl+0 pour la dixième.
-            bouton.KeyboardAccelerators.Add(new KeyboardAccelerator
-            {
-                Key = i < 9 ? VirtualKey.Number1 + i : VirtualKey.Number0,
-                Modifiers = VirtualKeyModifiers.Control,
-            });
-
             bouton.Click += (_, _) => Naviguer(page);
 
             _boutons[page.Cle] = bouton;
             MenuPanneau.Children.Add(bouton);
         }
+    }
+
+    // Ctrl+1 à Ctrl+9 : pages 1 à 9 ; Ctrl+0 : page 10.
+    // Géré ici plutôt que par KeyboardAccelerator, qui ne se déclenchait pas dans cette configuration.
+    private void Racine_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        var ctrl = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control);
+        if (!ctrl.HasFlag(CoreVirtualKeyStates.Down))
+        {
+            return;
+        }
+
+        var index = e.Key switch
+        {
+            >= VirtualKey.Number1 and <= VirtualKey.Number9 => e.Key - VirtualKey.Number1,
+            VirtualKey.Number0 => 9,
+            _ => -1,
+        };
+
+        if (index < 0 || index >= _pages.Count)
+        {
+            return;
+        }
+
+        Naviguer(_pages[index]);
+        e.Handled = true;
     }
 
     private void Naviguer(PageDefinition page)

@@ -43,5 +43,9 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart("v")
+          # Notes : changelog du coffre sans l'en-tête Obsidian ni les crochets des liens internes.
+          $texte = Get-Content "Vitalis-Vault/08-Releases/v$version.md" -Raw -Encoding utf8
+          $texte = ($texte -replace '(?s)^﻿?---.*?\r?\n---\r?\n', '') -replace '\[\[([^\]]+)\]\]', '$1'
+          Set-Content notes.md $texte -Encoding utf8
           gh release create "${{ github.ref_name }}" "Vitalis.exe" "installeur/Sortie/Vitalis-Setup-$version.exe" `
-            --title "Vitalis $version" --notes-file "Vitalis-Vault/08-Releases/v$version.md"
+            --title "Vitalis $version" --notes-file notes.md

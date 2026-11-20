@@ -98,6 +98,7 @@ public sealed partial class MainWindow : Window
             "mises-a-jour" => typeof(Views.MisesAJourPage),
             "tableau-de-bord" => typeof(Views.TableauDeBordPage),
             "pilotes" => typeof(Views.PilotesPage),
+            "demarrage" => typeof(Views.DemarragePage),
             _ => typeof(PagePlaceholder),
         };
         ContenuFrame.Navigate(type, page);

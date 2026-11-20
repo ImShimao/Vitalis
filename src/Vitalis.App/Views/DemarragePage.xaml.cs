@@ -16,7 +16,9 @@ public sealed partial class DemarragePage : Page
         Loaded += async (_, _) => await AfficherAsync();
     }
 
-    private DemarrageService Service() => new(new RegistreDemarrageWindows(), _fichierSauvegarde);
+    private DemarrageService Service() => Demo.Actif
+        ? new(new Demo.Registre(), Path.Combine(Demo.Dossier, "demarrage-desactive.json"))
+        : new(new RegistreDemarrageWindows(), _fichierSauvegarde);
 
     private async void BoutonActualiser_Click(object sender, RoutedEventArgs e) => await AfficherAsync();
 

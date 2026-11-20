@@ -73,7 +73,7 @@ public sealed partial class SanteLivePage : Page
             {
                 lock (capteurs)
                 {
-                    return capteurs.Lire();
+                    return Demo.Actif ? Demo.Capteurs() : capteurs.Lire();
                 }
             });
 

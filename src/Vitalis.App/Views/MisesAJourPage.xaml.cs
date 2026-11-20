@@ -9,14 +9,48 @@ namespace Vitalis.App.Views;
 /// <summary>Page « Mises à jour » : mises à jour Windows et logiciels (winget) en attente, installation après confirmation.</summary>
 public sealed partial class MisesAJourPage : Page
 {
-    // Une seule installation à la fois dans toute l'application (winget et Windows Update ne s'enchaînent pas bien en parallèle).
-    private static bool _installationEnCours;
+    // Les installations appartiennent à la session (Installations) : la page ne fait que les afficher.
+    // Changer de page ne les arrête pas ; en revenant, Rafraichir remet l'état de chaque ligne.
     private readonly List<Button> _boutonsInstallation = [];
+    private readonly List<Action> _lignes = [];
+    private readonly ContentControl _bilanWindows = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
+    private readonly ContentControl _bilanLogiciels = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
 
     public MisesAJourPage()
     {
         InitializeComponent();
-        Loaded += async (_, _) => await ChargerAsync(forcer: false);
+        Loaded += async (_, _) =>
+        {
+            Installations.Change += Rafraichir;
+            await ChargerAsync(forcer: false);
+            Rafraichir();
+        };
+        Unloaded += (_, _) => Installations.Change -= Rafraichir;
+    }
+
+    private void Rafraichir()
+    {
+        BoutonActualiser.IsEnabled = !Installations.EnCours && !EtatAnalyse.MisesAJour.EnCours;
+        foreach (var b in _boutonsInstallation)
+        {
+            b.IsEnabled = !Installations.EnCours;
+        }
+
+        foreach (var ligne in _lignes)
+        {
+            ligne();
+        }
+
+        if (Installations.Suivi(Installations.CleWindows) is { Etat: EtatInstallation.EnCours } w)
+        {
+            _bilanWindows.Content = Ui.Message(InfoBarSeverity.Informational, "Windows Update", w.Message);
+        }
+        else
+        {
+            Ui.AfficherBilan(_bilanWindows, Installations.Bilan(Installations.GroupeWindows));
+        }
+
+        Ui.AfficherBilan(_bilanLogiciels, Installations.Bilan(Installations.GroupeLogiciels));
     }
 
     private async void BoutonActualiser_Click(object sender, RoutedEventArgs e) => await ChargerAsync(forcer: true);
@@ -25,11 +59,16 @@ public sealed partial class MisesAJourPage : Page
         EtatAnalyse.MisesAJour, forcer, Corps, BoutonActualiser,
         "Recherche auprès de Windows Update et de winget… (environ 30 secondes, vous pouvez changer de page entre-temps)",
         ct => new AnalyseMisesAJour(new WuaCom(), new WingetCli()).AnalyserAsync(ct),
-        Afficher);
+        r =>
+        {
+            Afficher(r);
+            Rafraichir();
+        });
 
     private void Afficher(RapportMisesAJour r)
     {
         _boutonsInstallation.Clear();
+        _lignes.Clear();
         var windows = r.EnAttente.Elements.Count;
         var logiciels = r.Logiciels.Elements.Count;
         var date = r.DerniereInstallationReussie is { } d ? d.ToString("d MMMM yyyy", CultureInfo.CurrentCulture) : "inconnue";
@@ -51,6 +90,8 @@ public sealed partial class MisesAJourPage : Page
 
         // Windows Update
         Corps.Children.Add(Ui.TitreSection("Windows Update"));
+        (_bilanWindows.Parent as Panel)?.Children.Remove(_bilanWindows);
+        Corps.Children.Add(_bilanWindows);
         if (r.EnAttente.Etat == Disponibilite.Indisponible)
         {
             Corps.Children.Add(Ui.Message(InfoBarSeverity.Warning, "Recherche Windows Update indisponible", r.EnAttente.Raison));
@@ -91,6 +132,8 @@ public sealed partial class MisesAJourPage : Page
 
         // winget
         Corps.Children.Add(Ui.TitreSection("Logiciels (winget)"));
+        (_bilanLogiciels.Parent as Panel)?.Children.Remove(_bilanLogiciels);
+        Corps.Children.Add(_bilanLogiciels);
         if (r.Logiciels.Etat == Disponibilite.Indisponible)
         {
             Corps.Children.Add(Ui.Message(InfoBarSeverity.Warning, "winget indisponible", r.Logiciels.Raison));
@@ -108,8 +151,9 @@ public sealed partial class MisesAJourPage : Page
             foreach (var ligne in lignes)
             {
                 _boutonsInstallation.Add(ligne.Bouton);
-                ligne.Etat.Content = Ui.Texte($"{ligne.Logiciel.VersionActuelle}  →  {ligne.Logiciel.VersionDisponible}", secondaire: true);
                 var courante = ligne;
+                _lignes.Add(() => Ui.AppliquerSuivi(courante.Etat, courante.Bouton, Installations.Suivi(courante.Logiciel.Id),
+                    () => Ui.Texte($"{courante.Logiciel.VersionActuelle}  →  {courante.Logiciel.VersionDisponible}", secondaire: true), "À jour"));
                 ligne.Bouton.Click += async (_, _) =>
                 {
                     if (await ConfirmerAsync("Mettre à jour ce logiciel ?",
@@ -177,111 +221,33 @@ public sealed partial class MisesAJourPage : Page
         return await dialogue.ShowAsync() == ContentDialogResult.Primary;
     }
 
-    private void Verrouiller(bool verrou)
+    private static async Task InstallerLogicielsAsync(List<(MiseAJourLogiciel Logiciel, ContentControl Etat, Button Bouton)> lignes)
     {
-        _installationEnCours = verrou;
-        BoutonActualiser.IsEnabled = !verrou;
-        foreach (var b in _boutonsInstallation)
-        {
-            b.IsEnabled = !verrou;
-        }
-    }
-
-    private async Task InstallerLogicielsAsync(List<(MiseAJourLogiciel Logiciel, ContentControl Etat, Button Bouton)> lignes)
-    {
-        if (_installationEnCours || lignes.Count == 0)
-        {
-            return;
-        }
-
-        Verrouiller(true);
-        int reussis = 0, echecs = 0;
-        var redemarrage = false;
-        try
-        {
-            foreach (var (logiciel, etat, bouton) in lignes)
+        await Installations.LancerAsync(Installations.GroupeLogiciels, lignes.Select(l => l.Logiciel.Id).ToList(),
+            (id, _) => InstallateurWinget.MettreAJourAsync(id),
+            resultats =>
             {
-                etat.Content = Ui.Chargement("Mise à jour…");
-                ResultatInstallation r;
-                try
-                {
-                    r = await InstallateurWinget.MettreAJourAsync(logiciel.Id);
-                }
-                catch (Exception e)
-                {
-                    r = new ResultatInstallation(false, e.Message);
-                }
-
-                Vitalis.Core.Journal.JournalVitalis.Information($"winget {logiciel.Id} : {(r.Reussi ? "réussi" : "échec")}.");
-                redemarrage |= r.RedemarrageRequis;
-                var badge = r.Reussi ? Ui.Badge(Niveau.Succes, "À jour") : Ui.Badge(Niveau.Critique, "Échec");
-                ToolTipService.SetToolTip(badge, r.Message);
-                etat.Content = badge;
-                if (r.Reussi)
-                {
-                    reussis++;
-                    bouton.Visibility = Visibility.Collapsed;
-                }
-                else
-                {
-                    echecs++;
-                }
-            }
-        }
-        finally
-        {
-            Verrouiller(false);
-        }
-
-        var resume = $"{Ui.Pluriel(reussis, "logiciel mis à jour", "logiciels mis à jour")}, {Ui.Pluriel(echecs, "échec")}." +
-            (echecs > 0 ? " Survolez « Échec » pour la raison." : string.Empty) +
-            (redemarrage ? " Redémarrez le PC pour terminer." : string.Empty);
-        Corps.Children.Insert(0, Ui.Message(echecs == 0 ? InfoBarSeverity.Success : InfoBarSeverity.Warning, "Mises à jour des logiciels terminées", resume));
+                var reussis = resultats.Count(r => r.Reussi);
+                var echecs = resultats.Count - reussis;
+                var redemarrage = resultats.Any(r => r.RedemarrageRequis);
+                var resume = $"{Ui.Pluriel(reussis, "logiciel mis à jour", "logiciels mis à jour")}, {Ui.Pluriel(echecs, "échec")}." +
+                    (echecs > 0 ? " Survolez « Échec » pour la raison." : string.Empty) +
+                    (redemarrage ? " Redémarrez le PC pour terminer." : string.Empty);
+                return new BilanInstallation(echecs == 0, "Mises à jour des logiciels terminées", resume, redemarrage);
+            });
     }
 
     private async Task InstallerWindowsAsync(int nombre)
     {
-        if (_installationEnCours || !await ConfirmerAsync("Installer les mises à jour Windows ?",
-            $"Vitalis va télécharger et installer {Ui.Pluriel(nombre, "mise à jour", "mises à jour")} par Windows Update, comme le ferait Windows. Cela peut prendre longtemps, et un redémarrage peut être demandé. Les contrats de licence des mises à jour sont acceptés en votre nom.",
+        if (Installations.EnCours || !await ConfirmerAsync("Installer les mises à jour Windows ?",
+            $"Vitalis va télécharger et installer {Ui.Pluriel(nombre, "mise à jour", "mises à jour")} par Windows Update, comme le ferait Windows. Cela peut prendre longtemps, et un redémarrage peut être demandé. Les contrats de licence des mises à jour sont acceptés en votre nom. Vous pouvez changer de page pendant l'installation.",
             "Installer"))
         {
             return;
         }
 
-        Verrouiller(true);
-        var message = Ui.Message(InfoBarSeverity.Informational, "Windows Update", "Préparation…");
-        Corps.Children.Insert(0, message);
-        try
-        {
-            var etape = new Progress<string>(t => message.Message = t);
-            var r = await Task.Run(() => InstallateurWindowsUpdate.Installer(etape));
-            message.Severity = r.Reussi ? InfoBarSeverity.Success : InfoBarSeverity.Warning;
-            message.Title = r.Reussi ? "Mises à jour Windows installées" : "Mises à jour Windows";
-            message.Message = r.Message;
-            if (r.RedemarrageRequis)
-            {
-                var b = Ui.Bouton("Redémarrer maintenant");
-                b.Click += async (_, _) =>
-                {
-                    if (await ConfirmerAsync("Redémarrer le PC ?", "Enregistrez votre travail : toutes les applications vont se fermer.", "Redémarrer"))
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("shutdown", "/r /t 0") { CreateNoWindow = true, UseShellExecute = false });
-                    }
-                };
-                message.ActionButton = b;
-            }
-
-            Vitalis.Core.Journal.JournalVitalis.Information($"Windows Update : {(r.Reussi ? "réussi" : "échec")}.");
-        }
-        catch (Exception e)
-        {
-            message.Severity = InfoBarSeverity.Error;
-            message.Title = "Installation impossible";
-            message.Message = $"{e.GetType().Name} : {e.Message}";
-        }
-        finally
-        {
-            Verrouiller(false);
-        }
+        await Installations.LancerAsync(Installations.GroupeWindows, [Installations.CleWindows],
+            (_, etape) => Task.Run(() => InstallateurWindowsUpdate.Installer(etape)),
+            r => new BilanInstallation(r[0].Reussi, r[0].Reussi ? "Mises à jour Windows installées" : "Mises à jour Windows", r[0].Message, r[0].RedemarrageRequis));
     }
 }

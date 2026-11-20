@@ -31,6 +31,7 @@ public static class Program
         try
         {
             ComWrappersSupport.InitializeComWrappers();
+            Demo.Activer(args);
             if (args.Contains(AnalysePlanifiee.Argument))
             {
                 // Lancé par le Planificateur de tâches : analyse sans fenêtre, notification, puis fin.

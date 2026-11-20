@@ -48,7 +48,7 @@ public sealed partial class MainWindow : Window
         SetTitleBar(BarreTitre);
 
         // Mica seulement sur Windows 11 ; sur Windows 10 la fenêtre garde le fond du thème.
-        if (MicaController.IsSupported())
+        if (!Demo.Actif && MicaController.IsSupported())
         {
             SystemBackdrop = new MicaBackdrop();
         }
@@ -65,7 +65,7 @@ public sealed partial class MainWindow : Window
         _pages = new MainViewModel().Pages;
         ConstruireMenu(_pages);
         Racine.KeyDown += Racine_KeyDown;
-        Naviguer(_pages[0].Cle);
+        Naviguer(Demo.PageInitiale ?? _pages[0].Cle);
     }
 
     [DllImport("user32.dll")]

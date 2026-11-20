@@ -8,7 +8,7 @@ namespace Vitalis.App.Views;
 /// <summary>Page « Performances » : benchmarks CPU, RAM, disque, carte graphique (WinSAT) ; historique et comparaison.</summary>
 public sealed partial class PerformancesPage : Page
 {
-    private static readonly string Dossier = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Vitalis");
+    private static readonly string Dossier = Demo.Actif ? Demo.Dossier : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Vitalis");
     private static readonly string FichierHistorique = Path.Combine(Dossier, "performances.json");
 
     private static string Glyphe(string composant) => composant switch

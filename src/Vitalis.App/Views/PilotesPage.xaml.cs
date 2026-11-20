@@ -21,12 +21,28 @@ public sealed partial class PilotesPage : Page
     private readonly List<Button> _boutonsInstallation = [];
     private ResultatPilotes? _resultat;
     private DispatcherTimer? _delaiRecherche;
-    private bool _installationEnCours;
+    private readonly List<Action> _lignes = [];
+    private readonly ContentControl _bilan = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
 
     public PilotesPage()
     {
         InitializeComponent();
-        Loaded += async (_, _) => await ChargerAsync(forcer: false);
+        Loaded += async (_, _) =>
+        {
+            Installations.Change += Rafraichir;
+            await ChargerAsync(forcer: false);
+            Rafraichir();
+        };
+        Unloaded += (_, _) => Installations.Change -= Rafraichir;
+    }
+
+    /// <summary>État des installations de la session (elles continuent quand on change de page).</summary>
+    private void Rafraichir()
+    {
+        BoutonActualiser.IsEnabled = !Installations.EnCours && !EtatAnalyse.Pilotes.EnCours;
+        _boutonsInstallation.ForEach(b => b.IsEnabled = !Installations.EnCours);
+        _lignes.ForEach(l => l());
+        Ui.AfficherBilan(_bilan, Installations.Bilan(Installations.GroupePilotes));
     }
 
     private async void BoutonActualiser_Click(object sender, RoutedEventArgs e) => await ChargerAsync(forcer: true);
@@ -40,6 +56,7 @@ public sealed partial class PilotesPage : Page
             _resultat = r;
             Filtres.Visibility = r.Installes.Pilotes.Elements.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             Afficher();
+            Rafraichir();
         });
 
     private static async Task<ResultatPilotes> AnalyserAsync(CancellationToken ct)
@@ -111,6 +128,7 @@ public sealed partial class PilotesPage : Page
         }
 
         _boutonsInstallation.Clear();
+        _lignes.Clear();
         var tous = r.Installes.Pilotes.Elements;
         var disponibles = r.Disponibles.Elements;
 
@@ -145,6 +163,8 @@ public sealed partial class PilotesPage : Page
     private void AfficherDisponibles(Section<ComparaisonPilote> section)
     {
         Corps.Children.Add(Ui.TitreSection("Mises à jour de pilotes"));
+        (_bilan.Parent as Panel)?.Children.Remove(_bilan);
+        Corps.Children.Add(_bilan);
         if (section.Etat == Disponibilite.Indisponible)
         {
             Corps.Children.Add(Ui.Message(InfoBarSeverity.Warning, "Comparaison impossible", section.Raison));
@@ -176,6 +196,8 @@ public sealed partial class PilotesPage : Page
         {
             _boutonsInstallation.Add(l.Bouton);
             var courante = l;
+            _lignes.Add(() => Ui.AppliquerSuivi(courante.Etat, courante.Bouton, Installations.Suivi(courante.Comparaison.Disponible.UpdateId),
+                () => Ui.Badge(Niveau.Attention, "Plus récent disponible"), "Installé"));
             l.Bouton.Click += async (_, _) =>
             {
                 if (await ConfirmerAsync("Installer ce pilote ?",
@@ -196,7 +218,6 @@ public sealed partial class PilotesPage : Page
             var propose = $"Proposé : pilote du {Date(c.Disponible.Date)}" + (c.Disponible.Fournisseur is null ? string.Empty : $" par {c.Disponible.Fournisseur}");
             var droite = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
             l.Etat.VerticalAlignment = VerticalAlignment.Center;
-            l.Etat.Content = Ui.Badge(Niveau.Attention, "Plus récent disponible");
             droite.Children.Add(l.Etat);
             droite.Children.Add(l.Bouton);
             return (UIElement)Ui.Ligne(Nom(c), $"{installe}  →  {propose}", droite, Ui.Icone("", 18));
@@ -337,49 +358,11 @@ public sealed partial class PilotesPage : Page
         return await dialogue.ShowAsync() == ContentDialogResult.Primary;
     }
 
-    private async Task InstallerAsync(List<(ComparaisonPilote Comparaison, ContentControl Etat, Button Bouton)> lignes)
+    private static async Task InstallerAsync(List<(ComparaisonPilote Comparaison, ContentControl Etat, Button Bouton)> lignes)
     {
-        if (_installationEnCours || lignes.Count == 0)
-        {
-            return;
-        }
-
-        _installationEnCours = true;
-        BoutonActualiser.IsEnabled = false;
-        _boutonsInstallation.ForEach(b => b.IsEnabled = false);
-        foreach (var l in lignes)
-        {
-            l.Etat.Content = Ui.Chargement("Installation…");
-        }
-
-        ResultatInstallation r;
-        try
-        {
-            var ids = lignes.Select(l => l.Comparaison.Disponible.UpdateId).ToList();
-            r = await Task.Run(() => InstallateurWindowsUpdate.Installer(identifiants: ids));
-        }
-        catch (Exception e)
-        {
-            r = new ResultatInstallation(false, $"{e.GetType().Name} : {e.Message}");
-        }
-        finally
-        {
-            _installationEnCours = false;
-            BoutonActualiser.IsEnabled = true;
-            _boutonsInstallation.ForEach(b => b.IsEnabled = true);
-        }
-
-        JournalVitalis.Information($"Pilotes Windows Update ({lignes.Count}) : {(r.Reussi ? "réussi" : "échec")}.");
-        foreach (var l in lignes)
-        {
-            l.Etat.Content = r.Reussi ? Ui.Badge(Niveau.Succes, "Installé") : Ui.Badge(Niveau.Critique, "Échec");
-            if (r.Reussi)
-            {
-                l.Bouton.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        Corps.Children.Insert(0, Ui.Message(r.Reussi ? InfoBarSeverity.Success : InfoBarSeverity.Warning,
-            r.Reussi ? "Pilotes installés" : "Installation des pilotes", r.Message));
+        var ids = lignes.Select(l => l.Comparaison.Disponible.UpdateId).ToList();
+        await Installations.LancerEnBlocAsync(Installations.GroupePilotes, ids,
+            etape => Task.Run(() => InstallateurWindowsUpdate.Installer(etape, identifiants: ids)),
+            r => new BilanInstallation(r.Reussi, r.Reussi ? "Pilotes installés" : "Installation des pilotes", r.Message, r.RedemarrageRequis));
     }
 }

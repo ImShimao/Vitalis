@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
+using Vitalis.Core.MisesAJour;
 using Windows.Foundation;
 
 namespace Vitalis.App.Views;
@@ -17,7 +18,7 @@ public enum Niveau
 }
 
 /// <summary>Briques d'interface partagées par toutes les pages : cartes, badges, textes, états de chargement.</summary>
-public static class Ui
+public static partial class Ui
 {
     public static Brush Pinceau(string cle) => (Brush)Application.Current.Resources[cle];
 
@@ -462,5 +463,76 @@ public sealed class GrilleAdaptative : Panel
         }
 
         return finale;
+    }
+
+}
+
+/// <summary>Suivi des installations de la session dans les pages Mises à jour et Pilotes.</summary>
+public static partial class Ui
+{
+    /// <summary>
+    /// État d'une ligne installable d'après le suivi de la session (<see cref="Installations"/>) : en cours, réussie
+    /// (bouton masqué), échouée (raison au survol), ou rien encore (contenu par défaut). Bouton grisé pendant toute installation.
+    /// </summary>
+    public static void AppliquerSuivi(ContentControl etat, Button bouton, SuiviInstallation? suivi, Func<UIElement> parDefaut, string texteReussi)
+    {
+        bouton.IsEnabled = !Installations.EnCours;
+        switch (suivi?.Etat)
+        {
+            case EtatInstallation.EnCours:
+                etat.Content = Chargement(suivi.Message);
+                break;
+            case EtatInstallation.Reussie:
+                etat.Content = Badge(Niveau.Succes, texteReussi);
+                bouton.Visibility = Visibility.Collapsed;
+                break;
+            case EtatInstallation.Echouee:
+                var badge = Badge(Niveau.Critique, "Échec");
+                ToolTipService.SetToolTip(badge, suivi.Message);
+                etat.Content = badge;
+                bouton.Visibility = Visibility.Visible;
+                break;
+            default:
+                if (etat.Content is null || etat.Content is Grid)
+                {
+                    etat.Content = parDefaut();
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>Bilan de la dernière série d'installations d'un groupe, avec un bouton de redémarrage si besoin.</summary>
+    public static void AfficherBilan(ContentControl zone, BilanInstallation? bilan)
+    {
+        if (bilan is null)
+        {
+            zone.Content = null;
+            return;
+        }
+
+        Button? redemarrer = null;
+        if (bilan.Redemarrage)
+        {
+            redemarrer = Bouton("Redémarrer maintenant");
+            redemarrer.Click += async (_, _) =>
+            {
+                var dialogue = new ContentDialog
+                {
+                    Title = "Redémarrer le PC ?",
+                    Content = new TextBlock { Text = "Enregistrez votre travail : toutes les applications vont se fermer.", TextWrapping = TextWrapping.Wrap },
+                    PrimaryButtonText = "Redémarrer",
+                    CloseButtonText = "Annuler",
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = zone.XamlRoot,
+                };
+                if (await dialogue.ShowAsync() == ContentDialogResult.Primary)
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("shutdown", "/r /t 0") { CreateNoWindow = true, UseShellExecute = false });
+                }
+            };
+        }
+
+        zone.Content = Message(bilan.Reussi ? InfoBarSeverity.Success : InfoBarSeverity.Warning, bilan.Titre, bilan.Message, redemarrer);
     }
 }

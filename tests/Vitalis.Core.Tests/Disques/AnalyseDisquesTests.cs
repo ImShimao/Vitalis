@@ -140,6 +140,50 @@ public class AnalyseDisquesTests
         AnalyseDisques.TypeDe(code).Should().Be(attendu);
     }
 
+    private const string ObjetDisque1 =
+        @"{1}\\DESKOP-SHIMAO\root/Microsoft/Windows/Storage/Providers_v2\SPACES_PhysicalDisk.ObjectId=""{4b67c8e4-3258-11ef-8e30-806e6f6e6963}:PD:{088633e3-7f9a-8f41-0e1e-049a15674614}""";
+    private const string ObjetCompteur1 =
+        @"{1}\\DESKOP-SHIMAO\root/Microsoft/Windows/Storage/Providers_v2\SPACES_StorageReliabilityCounter.ObjectId=""{4b67c8e4-3258-11ef-8e30-806e6f6e6963}:SRC:{aaaaaaaa-1111-2222-3333-444444444444}""";
+
+    [Fact]
+    public async Task Association_RelieLeDisqueAuCompteurMemeSiDeviceIdDiffere()
+    {
+        // DeviceId des compteurs volontairement faux : seule l'association peut faire le lien.
+        var source = new FauxSourceWmi()
+            .Avec("MSFT_PhysicalDisk", Ligne(("DeviceId", "1"), ("ObjectId", ObjetDisque1), ("FriendlyName", "SSD test"), ("MediaType", (ushort)4), ("HealthStatus", (ushort)0), ("Size", (ulong)(500 * Gio))))
+            .Avec("MSFT_StorageReliabilityCounter", Ligne(("DeviceId", "99"), ("ObjectId", ObjetCompteur1), ("Temperature", (byte)44), ("Wear", (byte)7)))
+            .Avec("MSFT_PhysicalDiskToStorageReliabilityCounter", Ligne(
+                ("PhysicalDisk", @"\\DESKOP-SHIMAO\root\Microsoft\Windows\Storage:MSFT_PhysicalDisk.ObjectId=""{4b67c8e4-3258-11ef-8e30-806e6f6e6963}:PD:{088633e3-7f9a-8f41-0e1e-049a15674614}"""),
+                ("StorageReliabilityCounter", @"\\DESKOP-SHIMAO\root\Microsoft\Windows\Storage:MSFT_StorageReliabilityCounter.ObjectId=""{4b67c8e4-3258-11ef-8e30-806e6f6e6963}:SRC:{aaaaaaaa-1111-2222-3333-444444444444}""")));
+
+        var rapport = await new AnalyseDisques(source).AnalyserAsync();
+
+        rapport.Disques.Elements.Single().TemperatureC.Should().Be(44);
+        rapport.Disques.Elements.Single().UsurePourcent.Should().Be(7);
+        rapport.SmartComplet.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SansAssociation_LaJointureParDeviceIdReste()
+    {
+        var source = new FauxSourceWmi()
+            .Avec("MSFT_PhysicalDisk", Ligne(("DeviceId", "1"), ("ObjectId", ObjetDisque1), ("FriendlyName", "SSD test"), ("MediaType", (ushort)4), ("HealthStatus", (ushort)0), ("Size", (ulong)(500 * Gio))))
+            .Avec("MSFT_StorageReliabilityCounter", Ligne(("DeviceId", "1"), ("Temperature", (byte)39)))
+            .SansClasse("MSFT_PhysicalDiskToStorageReliabilityCounter");
+
+        var rapport = await new AnalyseDisques(source).AnalyserAsync();
+
+        rapport.Disques.Elements.Single().TemperatureC.Should().Be(39);
+    }
+
+    [Fact]
+    public void DernierGuid_ExtraitLeGuidDuChemin()
+    {
+        AnalyseDisques.DernierGuid(ObjetDisque1).Should().Be("{088633e3-7f9a-8f41-0e1e-049a15674614}");
+        AnalyseDisques.DernierGuid("pas de guid").Should().BeNull();
+        AnalyseDisques.DernierGuid(null).Should().BeNull();
+    }
+
     [Fact]
     public async Task AnnulationDemandee_LanceOperationCanceled()
     {
